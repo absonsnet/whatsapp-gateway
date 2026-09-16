@@ -210,7 +210,9 @@ async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?:
 }
 
 /**
- * Helper to download and save media
+ * Helper to download and save media.
+ * Resolves the user's storage strategy (cloud / local / none) and routes
+ * the downloaded buffer accordingly.
  */
 export async function downloadAndSaveMedia(message: WAMessage, sessionId: string): Promise<string | null> {
     try {
@@ -296,7 +298,7 @@ export async function downloadAndSaveMedia(message: WAMessage, sessionId: string
 
         logger.success("Media", `Downloaded ${buffer.length} bytes.`);
 
-        // Generate filename
+        // Generate filename and mimetype
         const extMap: Record<string, string> = {
             imageMessage: 'jpg',
             videoMessage: 'mp4',
@@ -315,10 +317,56 @@ export async function downloadAndSaveMedia(message: WAMessage, sessionId: string
         }
 
         const filename = `${sessionId}-${message.key.id}.${ext}`;
+        const mimetype = mime || "application/octet-stream";
+
+        // --- Resolve storage strategy (cloud / local / none) ---
+        let storageMode: "cloud" | "local" | "none" = "local"; // fallback
+        let cloudProvider: any = null;
+
+        try {
+            // Lookup the session's owner userId
+            const session = await prisma.session.findUnique({
+                where: { sessionId },
+                select: { userId: true },
+            });
+
+            if (session) {
+                const { resolveStorageForUser } = await import("@/lib/cloud-storage");
+                const resolved = await resolveStorageForUser(session.userId);
+                storageMode = resolved.mode;
+                cloudProvider = resolved.provider;
+
+                if (resolved.mode === "none") {
+                    logger.info(
+                        "Media",
+                        `Skipping media save for session ${sessionId}: ${resolved.reason || "no storage available"}`
+                    );
+                    return null;
+                }
+            }
+        } catch (e) {
+            logger.warn("Media", "Failed to resolve storage strategy, falling back to local:", e);
+            // storageMode stays "local" as default fallback
+        }
+
+        if (storageMode === "cloud" && cloudProvider) {
+            // --- Cloud upload ---
+            try {
+                const cloudUrl = await cloudProvider.upload(buffer, filename, mimetype);
+                logger.success("Media", `Cloud upload success. URL: ${cloudUrl}`);
+                return cloudUrl;
+            } catch (e) {
+                logger.error("Media", "Cloud upload failed:", e);
+                // Don't fallback to local — respect the admin's policy
+                return null;
+            }
+        }
+
+        // --- Local disk storage (only when allowed) ---
         const mediaDir = path.join(process.cwd(), "data", "media");
         const filePath = path.join(mediaDir, filename);
 
-        // Ensure directory exists (redundant if handled by OS, but safe)
+        // Ensure directory exists
         await mkdir(path.dirname(filePath), { recursive: true });
 
         await writeFile(filePath, buffer);

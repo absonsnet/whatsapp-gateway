@@ -51,6 +51,13 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum CloudStorageProvider {
+  GOOGLE_DRIVE
+  AWS_S3
+  CLOUDINARY
+  WEBDAV
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String?
@@ -72,6 +79,7 @@ model User {
   sessionAccesses SessionAccess[]
   payments  Payment[]
   apiUsages ApiUsage[]
+  cloudStorageConfigs CloudStorageConfig[]
 }
 
 model Session {
@@ -319,6 +327,10 @@ model SystemConfig {
   // Bentuk: { FREE: {...}, STANDARD: {...}, ... } meng-override default di lib/plans.ts
   planConfig         Json?
 
+  // Cloud Storage — Super Admin controls
+  allowLocalStorage    Boolean  @default(false)  // Global toggle: allow local disk storage for users
+  allowLocalStorageFor Json?    // Per-user override: ["userId1", "userId2"] or null = use global
+
   updatedAt          DateTime @updatedAt
 }
 
@@ -442,4 +454,27 @@ model Payment {
 
   @@index([userId])
   @@index([status])
+}
+
+// Cloud storage configuration per user — multi-provider support
+model CloudStorageConfig {
+  id          String                @id @default(cuid())
+  userId      String
+  provider    CloudStorageProvider
+  name        String                @default("My Cloud Storage")
+  isActive    Boolean               @default(true)
+
+  // Encrypted JSON blob containing provider-specific credentials:
+  // Google Drive: { accessToken, refreshToken, tokenExpiry, folderId? }
+  // AWS S3:      { accessKeyId, secretAccessKey, region, bucket, prefix? }
+  // Cloudinary:  { cloudName, apiKey, apiSecret, folder? }
+  // WebDAV:      { url, username, password, basePath? }
+  credentials String                @db.Text
+
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

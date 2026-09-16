@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, Save, AlertCircle } from "lucide-react";
+import { RefreshCw, Save, AlertCircle, HardDrive, CloudOff, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentSettingsCard } from "@/components/dashboard/payment-settings";
 import { PlanEditorCard } from "@/components/dashboard/plan-editor";
@@ -19,10 +19,14 @@ export default function SettingsPage() {
         appName: "WA-AKG",
         logoUrl: "",
         timezone: "Asia/Jakarta",
-        enableRegistration: true
+        enableRegistration: true,
+        allowLocalStorage: false,
+        allowLocalStorageFor: [] as string[],
     });
     const [systemLoading, setSystemLoading] = useState(false);
     const [timezones, setTimezones] = useState<string[]>(["UTC", "Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura"]);
+    const [allUsers, setAllUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+    const [perUserInput, setPerUserInput] = useState("");
 
     useEffect(() => {
         try {
@@ -51,12 +55,27 @@ export default function SettingsPage() {
                         // @ts-ignore
                         faviconUrl: data.faviconUrl || "/favicon.ico",
                         timezone: data.timezone || "Asia/Jakarta",
-                        enableRegistration: data.enableRegistration !== undefined ? data.enableRegistration : true
-                    });
+                        enableRegistration: data.enableRegistration !== undefined ? data.enableRegistration : true,
+                        allowLocalStorage: data.allowLocalStorage || false,
+                        allowLocalStorageFor: Array.isArray(data.allowLocalStorageFor) ? data.allowLocalStorageFor : [],
+                    } as any);
                 }
             })
             .catch(() => { });
     }, []);
+
+    // Fetch users for per-user override (SuperAdmin only)
+    useEffect(() => {
+        if (!isSuperAdmin) return;
+        fetch("/api/users")
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+                if (d?.data) {
+                    setAllUsers(d.data.map((u: any) => ({ id: u.id, name: u.name || "", email: u.email })));
+                }
+            })
+            .catch(() => {});
+    }, [isSuperAdmin]);
 
     const handleSaveSystem = async () => {
         setSystemLoading(true);
@@ -78,6 +97,30 @@ export default function SettingsPage() {
         } finally {
             setSystemLoading(false);
         }
+    };
+
+    const addPerUserOverride = () => {
+        const trimmed = perUserInput.trim();
+        if (!trimmed) return;
+
+        // Find user by email or ID
+        const matchedUser = allUsers.find(u => u.email === trimmed || u.id === trimmed);
+        const userId = matchedUser ? matchedUser.id : trimmed;
+
+        if (!systemConfig.allowLocalStorageFor.includes(userId)) {
+            setSystemConfig(prev => ({
+                ...prev,
+                allowLocalStorageFor: [...prev.allowLocalStorageFor, userId]
+            }));
+        }
+        setPerUserInput("");
+    };
+
+    const removePerUserOverride = (userId: string) => {
+        setSystemConfig(prev => ({
+            ...prev,
+            allowLocalStorageFor: prev.allowLocalStorageFor.filter(id => id !== userId),
+        }));
     };
 
     const inputClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
@@ -190,6 +233,102 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
+            {/* Media Storage Policy — SUPERADMIN only */}
+            {isSuperAdmin && (
+                <Card className="border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20">
+                    <CardHeader>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-orange-600" />
+                            Media Storage Policy
+                        </CardTitle>
+                        <CardDescription>
+                            Control whether users can use local disk storage for WhatsApp media.
+                            By default, local storage is <strong>disabled</strong> — users must configure their own cloud storage.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <Label htmlFor="allow-local-storage" className="flex flex-col space-y-1 min-w-0 flex-1">
+                                <span className="flex items-center gap-2">
+                                    <HardDrive className="h-4 w-4" />
+                                    Allow Local Disk Storage
+                                </span>
+                                <span className="font-normal text-xs text-muted-foreground">
+                                    When enabled, users without cloud storage will save media to the server&apos;s local disk.
+                                    When disabled, only users with configured cloud storage can save media files.
+                                </span>
+                            </Label>
+                            <Switch
+                                id="allow-local-storage"
+                                checked={systemConfig.allowLocalStorage}
+                                onCheckedChange={c => setSystemConfig(prev => ({ ...prev, allowLocalStorage: c }))}
+                            />
+                        </div>
+
+                        {/* Per-user overrides */}
+                        <div className="border-t border-border/50 pt-4">
+                            <Label className="flex flex-col space-y-1 mb-3">
+                                <span className="text-sm font-medium">Per-User Local Storage Override</span>
+                                <span className="font-normal text-xs text-muted-foreground">
+                                    Grant specific users local storage access regardless of the global setting.
+                                </span>
+                            </Label>
+
+                            <div className="flex gap-2 mb-3">
+                                <input
+                                    className={inputClass}
+                                    placeholder="Enter user email or ID"
+                                    value={perUserInput}
+                                    onChange={(e) => setPerUserInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && addPerUserOverride()}
+                                    list="user-suggestions"
+                                />
+                                <datalist id="user-suggestions">
+                                    {allUsers.map(u => (
+                                        <option key={u.id} value={u.email}>{u.name || u.email}</option>
+                                    ))}
+                                </datalist>
+                                <Button variant="outline" onClick={addPerUserOverride}>Add</Button>
+                            </div>
+
+                            {systemConfig.allowLocalStorageFor.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {systemConfig.allowLocalStorageFor.map((userId) => {
+                                        const user = allUsers.find(u => u.id === userId);
+                                        return (
+                                            <span
+                                                key={userId}
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 text-xs font-medium"
+                                            >
+                                                {user ? (user.name || user.email) : userId}
+                                                <button
+                                                    onClick={() => removePerUserOverride(userId)}
+                                                    className="hover:text-destructive transition-colors"
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                    <CloudOff className="h-3.5 w-3.5" />
+                                    No per-user overrides set.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="pt-2">
+                            <Button onClick={handleSaveSystem} disabled={systemLoading}>
+                                {systemLoading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                                Save Storage Policy
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Payment Gateway — SUPERADMIN only */}
             {isSuperAdmin && <PaymentSettingsCard />}
 
@@ -232,3 +371,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+

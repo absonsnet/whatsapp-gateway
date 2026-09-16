@@ -29,7 +29,8 @@ import {
     Contact,
     UserPlus,
     Radio,
-    CreditCard
+    CreditCard,
+    Cloud
 } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
 import {
@@ -101,6 +102,7 @@ const navGroups: NavGroup[] = [
         label: "Account",
         items: [
             { href: "/dashboard/billing", label: "Billing & Plan", icon: CreditCard },
+            { href: "/dashboard/cloud-storage", label: "Cloud Storage", icon: Cloud },
         ],
     },
     {

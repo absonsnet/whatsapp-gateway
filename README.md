@@ -59,6 +59,7 @@ graph LR
 - **📇 Advanced Contacts**: Rich contact management with LID, verified names, and profile pictures.
 - **🎨 Creative Tools**: Built-in Sticker Maker with background removal (`remove.bg` integration).
 - **📘 Open API Spec**: Fully documented via `swagger-ui-react` at `/docs`.
+- **☁️ Multi-Provider Cloud Storage**: Store WhatsApp media on **Google Drive**, **AWS S3**, **Cloudinary**, or **WebDAV** with per-user config and AES-256 encrypted credentials.
 
 <details>
 <summary>📂 <b>View Webhook Payload Example</b></summary>
@@ -119,6 +120,7 @@ npm install
 # Configure environment
 cp .env.example .env
 # Edit .env with your DATABASE_URL, AUTH_SECRET, NEXTAUTH_URL etc.
+# For cloud storage (Google Drive), also set GOOGLE_CLIENT_ID/SECRET (see below).
 
 # Push schema and create admin
 npm run db:push
@@ -150,6 +152,114 @@ You can deploy the application and its MySQL database together using Docker Comp
 
 2. **Customization (Optional)**:
    To customize settings, edit the environment variables directly in `web/docker-compose.yml` (e.g. `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `AUTH_SECRET`, `TZ`, etc.), or copy `.env.example` to `.env` in the `web` folder.
+
+---
+
+## ☁️ Cloud Storage Setup
+
+WA-AKG supports **multi-provider cloud media storage** so each user can save WhatsApp media files to their own cloud account. By default, local disk storage is **disabled** — users must configure a cloud provider, or a Super Admin must explicitly allow local storage.
+
+### Environment Variables
+
+Add these to your `.env` file (only required for **Google Drive**):
+
+```env
+# Google Drive OAuth 2.0 (optional — only if using Google Drive)
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+NEXT_PUBLIC_GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+```
+
+> [!NOTE]
+> `GOOGLE_CLIENT_ID` and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` must be set to the **same value**. The `NEXT_PUBLIC_` variant is needed by the frontend to initiate the OAuth flow.
+
+### Provider Setup Guides
+
+<details>
+<summary>🗂️ <b>Google Drive (OAuth 2.0)</b></summary>
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (or select an existing one).
+3. Navigate to **APIs & Services → Credentials**.
+4. Click **Create Credentials → OAuth client ID**.
+5. Select **Web application** as the application type.
+6. Add your app's URL to **Authorized redirect URIs**:
+   ```
+   https://your-app.example.com/api/cloud-storage/google/callback
+   ```
+   For local development:
+   ```
+   http://localhost:3030/api/cloud-storage/google/callback
+   ```
+7. Copy the **Client ID** and **Client Secret** to your `.env` file.
+8. Navigate to **APIs & Services → Library** and enable the **Google Drive API**.
+9. Under **OAuth consent screen**, add your email to Test Users (if in "Testing" mode).
+10. In the dashboard, go to **Cloud Storage → Add Provider → Google Drive** and click **"Connect with Google"**.
+
+</details>
+
+<details>
+<summary>☁️ <b>AWS S3 / S3-Compatible Storage</b></summary>
+
+1. Log in to the [AWS Console](https://aws.amazon.com/console/) (or your S3-compatible provider's dashboard).
+2. Create an S3 bucket with the desired name and region.
+3. Set the bucket's **Block Public Access** settings to allow public reads (if you want direct media URLs).
+4. Create an **IAM user** with `AmazonS3FullAccess` policy (or a scoped policy for your bucket).
+5. Generate **Access Key ID** and **Secret Access Key** for the IAM user.
+6. In the dashboard, go to **Cloud Storage → Add Provider → AWS S3** and enter:
+   - **Access Key ID** and **Secret Access Key**
+   - **Region** (e.g., `us-east-1`)
+   - **Bucket Name**
+   - (Optional) **Path Prefix** (e.g., `whatsapp-media/`)
+   - (Optional) **Custom Endpoint** — for S3-compatible services like MinIO, DigitalOcean Spaces, Backblaze B2
+
+**S3-Compatible Services:**
+| Service | Endpoint Example |
+|---|---|
+| MinIO | `http://minio.local:9000` |
+| DigitalOcean Spaces | `https://nyc3.digitaloceanspaces.com` |
+| Backblaze B2 | `https://s3.us-west-004.backblazeb2.com` |
+| Cloudflare R2 | `https://<account-id>.r2.cloudflarestorage.com` |
+
+</details>
+
+<details>
+<summary>🌤️ <b>Cloudinary</b></summary>
+
+1. Sign up at [cloudinary.com](https://cloudinary.com/) (free tier available).
+2. Go to your **Dashboard** to find your credentials.
+3. In the WA-AKG dashboard, go to **Cloud Storage → Add Provider → Cloudinary** and enter:
+   - **Cloud Name** (shown on your Cloudinary dashboard)
+   - **API Key** (from Settings → Access Keys)
+   - **API Secret** (from Settings → Access Keys)
+   - (Optional) **Folder** (e.g., `whatsapp-media`)
+
+</details>
+
+<details>
+<summary>🌐 <b>WebDAV (Nextcloud, ownCloud, etc.)</b></summary>
+
+1. Get your WebDAV endpoint URL from your provider:
+   - **Nextcloud**: `https://your-nextcloud.com/remote.php/dav/files/USERNAME`
+   - **ownCloud**: `https://your-owncloud.com/remote.php/webdav`
+2. Use your username and password (or generate an **App Password** for better security).
+3. In the WA-AKG dashboard, go to **Cloud Storage → Add Provider → WebDAV** and enter:
+   - **WebDAV URL** (the full endpoint URL)
+   - **Username** and **Password**
+   - (Optional) **Base Path** (e.g., `/WhatsApp-Media/`)
+   - (Optional) **Public URL Base** — if files should be served via a public share URL
+
+</details>
+
+### Super Admin: Media Storage Policy
+
+As a Super Admin, you can control the global media storage policy from **Settings → Media Storage Policy**:
+
+- **Allow Local Disk Storage** (default: OFF) — toggle to allow users without cloud storage to fall back to local disk.
+- **Per-User Override** — grant specific users local storage access regardless of the global setting.
+
+> [!IMPORTANT]
+> When both local storage is disabled and a user has no cloud storage configured, media messages will still be received but the file content won't be saved. The chat UI will display: *"Media not saved: Cloud storage not configured."*
 
 ---
 
@@ -200,6 +310,7 @@ curl -X POST http://localhost:3000/api/messages/session_01/62812345678@s.whatsap
 - **API Key Auth**: Secured endpoints using `X-API-Key`.
 - **RBAC**: Multi-role support (`SUPERADMIN`, `OWNER`, `STAFF`).
 - **Encrypted Storage**: Sensitive credentials are secure with bcrypt and NextAuth.js.
+- **Cloud Credential Encryption**: All cloud storage credentials (API keys, OAuth tokens, passwords) are encrypted at rest using **AES-256-GCM** with your `AUTH_SECRET` as the encryption key.
 
 ---
 

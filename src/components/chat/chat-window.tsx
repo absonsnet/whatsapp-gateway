@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Paperclip, ArrowLeft, Phone, MoreVertical } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Image as ImageIcon, FileText, Music, Sticker as StickerIcon, Video, Download } from "lucide-react";
+import { Image as ImageIcon, FileText, Music, Sticker as StickerIcon, Video, Download, CloudOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createAppSocket } from "@/lib/socket-client";
 import type { Socket } from "socket.io-client";
@@ -300,6 +300,12 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
                                                 </Button>
                                             </div>
                                         )}
+                                        {msg.type === 'IMAGE' && !msg.mediaUrl && (
+                                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg mb-1.5 bg-muted/30 border border-dashed border-border/50 text-xs text-muted-foreground">
+                                                <CloudOff className="h-3.5 w-3.5 flex-shrink-0" />
+                                                <span>Media not saved: Cloud storage not configured.</span>
+                                            </div>
+                                        )}
                                         {msg.type === 'VIDEO' && msg.mediaUrl && (
                                             <div className="relative group/media mb-1.5">
                                                 <video src={msg.mediaUrl} controls className="rounded-lg max-h-60 w-full" />
@@ -313,6 +319,12 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
                                                 </Button>
                                             </div>
                                         )}
+                                        {msg.type === 'VIDEO' && !msg.mediaUrl && (
+                                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg mb-1.5 bg-muted/30 border border-dashed border-border/50 text-xs text-muted-foreground">
+                                                <CloudOff className="h-3.5 w-3.5 flex-shrink-0" />
+                                                <span>Media not saved: Cloud storage not configured.</span>
+                                            </div>
+                                        )}
                                         {msg.type === 'AUDIO' && msg.mediaUrl && (
                                             <div className="flex items-center gap-2 mb-1.5">
                                                 <audio src={msg.mediaUrl} controls className="h-10 w-full max-w-[220px] sm:max-w-[200px]" />
@@ -324,6 +336,12 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
                                                 >
                                                     <Download className="h-4 w-4" />
                                                 </Button>
+                                            </div>
+                                        )}
+                                        {msg.type === 'AUDIO' && !msg.mediaUrl && (
+                                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg mb-1.5 bg-muted/30 border border-dashed border-border/50 text-xs text-muted-foreground">
+                                                <CloudOff className="h-3.5 w-3.5 flex-shrink-0" />
+                                                <span>Media not saved: Cloud storage not configured.</span>
                                             </div>
                                         )}
                                         {msg.type === 'STICKER' && msg.mediaUrl && (
@@ -344,14 +362,26 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
                                                 </Button>
                                             </div>
                                         )}
+                                        {msg.type === 'STICKER' && !msg.mediaUrl && (
+                                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg mb-1.5 bg-muted/30 border border-dashed border-border/50 text-xs text-muted-foreground">
+                                                <CloudOff className="h-3.5 w-3.5 flex-shrink-0" />
+                                                <span>Media not saved: Cloud storage not configured.</span>
+                                            </div>
+                                        )}
                                         {msg.type !== 'TEXT' && msg.type !== 'IMAGE' && msg.type !== 'STICKER' && msg.type !== 'VIDEO' && msg.type !== 'AUDIO' && (
                                             <div className={cn(
                                                 "flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg mb-1 text-xs",
                                                 msg.fromMe ? "bg-white/15" : "bg-muted/50"
                                             )}>
                                                 <div className="flex items-center gap-2 truncate">
-                                                    <FileText className="h-3.5 w-3.5 flex-shrink-0" />
-                                                    <span className="font-medium truncate">{msg.type} Message</span>
+                                                    {msg.mediaUrl ? (
+                                                        <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    ) : (
+                                                        <CloudOff className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    )}
+                                                    <span className="font-medium truncate">
+                                                        {msg.mediaUrl ? `${msg.type} Message` : "Media not saved: Cloud storage not configured."}
+                                                    </span>
                                                 </div>
                                                 {msg.mediaUrl && (
                                                     <Button

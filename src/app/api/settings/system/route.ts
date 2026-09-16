@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
                 faviconUrl: true,
                 logoUrl: true,
                 timezone: true,
-                enableRegistration: true
+                enableRegistration: true,
+                allowLocalStorage: true,
+                allowLocalStorageFor: true
             }
         });
 
@@ -33,6 +35,8 @@ export async function GET(request: NextRequest) {
                     data: {
                         ...safeConfig,
                         enableRegistration: config.enableRegistration,
+                        allowLocalStorage: config.allowLocalStorage,
+                        allowLocalStorageFor: config.allowLocalStorageFor,
                     },
                 });
             }
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { appName, logoUrl, faviconUrl, timezone, enableRegistration } = body;
+        const { appName, logoUrl, faviconUrl, timezone, enableRegistration, allowLocalStorage, allowLocalStorageFor } = body;
 
         // Build patch object only with provided fields, so partial updates don't wipe others
         const patch: Record<string, unknown> = {};
@@ -63,6 +67,8 @@ export async function POST(req: NextRequest) {
         if (faviconUrl !== undefined) patch.faviconUrl = faviconUrl;
         if (timezone !== undefined) patch.timezone = timezone;
         if (enableRegistration !== undefined) patch.enableRegistration = enableRegistration;
+        if (allowLocalStorage !== undefined) patch.allowLocalStorage = allowLocalStorage;
+        if (allowLocalStorageFor !== undefined) patch.allowLocalStorageFor = allowLocalStorageFor;
 
         const config = await prisma.systemConfig.upsert({
             where: { id: "default" },
