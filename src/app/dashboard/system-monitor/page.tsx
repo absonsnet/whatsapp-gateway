@@ -25,7 +25,7 @@ export default function SystemMonitorPage() {
             }
         } catch {
             // "Failed to fetch" = blip jaringan / ekstensi browser membungkus fetch.
-            // Transient & bukan bug app — diabaikan biar tidak nge-spam overlay dev.
+            // Transient & not an app bug — ignored so it doesn't spam dev overlay.
         } finally {
             setLoading(false);
         }

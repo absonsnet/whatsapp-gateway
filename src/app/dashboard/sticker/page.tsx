@@ -25,7 +25,7 @@ export default function StickerPage() {
     const [type, setType] = useState("full");
     const [showAdvanced, setShowAdvanced] = useState(false);
 
-    // Ambil nama aplikasi (dari Settings) sebagai default pack/author — tidak hardcode.
+    // Get application name (from Settings) as default pack/author — not hardcoded.
     useEffect(() => {
         fetch("/api/settings/system")
             .then((r) => r.json())

@@ -53,7 +53,7 @@ export class WebDAVProvider implements ICloudStorageProvider {
                 Authorization: this.getAuthHeader(),
                 "Content-Type": mimetype,
             },
-            body: buffer,
+            body: new Uint8Array(buffer),
         });
 
         if (!res.ok && res.status !== 201 && res.status !== 204) {

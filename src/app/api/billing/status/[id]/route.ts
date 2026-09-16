@@ -24,7 +24,7 @@ export async function GET(
 
     if (!payment || (payment.userId !== user.id && user.role !== "SUPERADMIN")) {
         return NextResponse.json(
-            { status: false, message: "Pembayaran tidak ditemukan", error: "not_found" },
+            { status: false, message: "Payment not found", error: "not_found" },
             { status: 404 }
         );
     }

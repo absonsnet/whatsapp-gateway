@@ -173,9 +173,9 @@ app.prepare().then(() => {
           // diam-diam gagal, coba lagi interval berikutnya
         }
       };
-      // Ping tiap 4 menit (di bawah ambang idle-sleep umum ~15 menit).
+      // Ping every 4 minutes (below common idle-sleep threshold of ~15 mins).
       keepAliveInterval = setInterval(selfPing, 4 * 60 * 1000);
-      logger.info("Server", `Self keep-alive aktif → ${baseUrl}/api/health (tiap 4 menit)`);
+      logger.info("Server", `Self keep-alive active → ${baseUrl}/api/health (every 4 minutes)`);
     }
     // --------------------------------
   });

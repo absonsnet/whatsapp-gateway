@@ -39,7 +39,7 @@ export class CloudinaryProvider implements ICloudStorageProvider {
 
         // Use FormData with the upload API
         const formData = new FormData();
-        formData.append("file", new Blob([buffer], { type: mimetype }), filename);
+        formData.append("file", new Blob([new Uint8Array(buffer)], { type: mimetype }), filename);
         formData.append("api_key", this.creds.apiKey);
         formData.append("timestamp", timestamp);
         formData.append("signature", signature);

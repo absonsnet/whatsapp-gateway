@@ -35,7 +35,7 @@ export async function PATCH(
         if (plan !== undefined) {
             const planId = String(plan).toUpperCase() as PlanId;
             if (!VALID_PLANS.includes(planId)) {
-                return NextResponse.json({ status: false, message: "Plan tidak valid", error: "invalid_plan" }, { status: 400 });
+                return NextResponse.json({ status: false, message: "Invalid plan", error: "invalid_plan" }, { status: 400 });
             }
             updateData.plan = planId;
             if (planId === "FREE") {

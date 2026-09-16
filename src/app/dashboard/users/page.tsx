@@ -226,7 +226,7 @@ export default function UsersPage() {
                                         </SelectContent>
                                     </Select>
                                     <p className="text-xs text-muted-foreground">
-                                        Ubah plan user ini. Masa aktif memakai durasi default plan (FREE = tanpa batas).
+                                        Change this user's plan. Active period uses the plan's default duration (FREE = unlimited).
                                     </p>
                                 </div>
                             )}
@@ -264,7 +264,7 @@ export default function UsersPage() {
                                 <div className="mb-3">
                                     <Badge variant="secondary" className="text-xs">
                                         Plan: {user.plan || "FREE"}
-                                        {user.planExpiresAt ? ` · s/d ${new Date(user.planExpiresAt).toLocaleDateString()}` : ""}
+                                        {user.planExpiresAt ? ` · until ${new Date(user.planExpiresAt).toLocaleDateString()}` : ""}
                                     </Badge>
                                 </div>
 
