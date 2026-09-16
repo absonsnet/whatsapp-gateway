@@ -39,7 +39,7 @@ export default function ApiDocsPage() {
         };
     }, []);
 
-    // Ambil spesifikasi sendiri supaya bisa menangani error (anti halaman blank).
+    // Fetch spec directly to handle errors (prevent blank page).
     useEffect(() => {
         if (!authorized) return;
         let active = true;
@@ -50,18 +50,18 @@ export default function ApiDocsPage() {
                 const ct = res.headers.get("content-type") || "";
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 if (!ct.includes("application/json"))
-                    throw new Error("Respons bukan JSON (mungkin ke-redirect / error server)");
+                    throw new Error("Response is not JSON (might be redirected / server error)");
                 return res.json();
             })
             .then((json) => {
                 if (!active) return;
                 if (!json || typeof json !== "object" || !json.openapi)
-                    throw new Error("Spesifikasi OpenAPI tidak valid");
+                    throw new Error("Invalid OpenAPI specification");
                 setSpec(json);
             })
             .catch((e) => {
                 if (!active) return;
-                setSpecError(e?.message || "Gagal memuat dokumentasi");
+                setSpecError(e?.message || "Failed to load documentation");
             })
             .finally(() => {
                 if (active) setSpecLoading(false);
@@ -191,11 +191,11 @@ export default function ApiDocsPage() {
 
             <div className="container mx-auto">
                 {specLoading && (
-                    <div className="p-10 text-center text-gray-600">Memuat dokumentasi…</div>
+                    <div className="p-10 text-center text-gray-600">Loading documentation...</div>
                 )}
                 {specError && (
                     <div className="m-6 p-5 rounded-lg border border-red-200 bg-red-50 text-red-700">
-                        <p className="font-semibold mb-1">Gagal memuat dokumentasi API</p>
+                        <p className="font-semibold mb-1">Failed to load API documentation</p>
                         <p className="text-sm mb-3">{specError}</p>
                         <a
                             href="/api/docs"
@@ -203,7 +203,7 @@ export default function ApiDocsPage() {
                             rel="noreferrer"
                             className="text-sm font-medium underline hover:text-red-900"
                         >
-                            Buka spesifikasi mentah (/api/docs)
+                            Open raw specification (/api/docs)
                         </a>
                     </div>
                 )}
