@@ -307,6 +307,9 @@ model BotConfig {
   // Format: [{command: "aims", response: "Our aims are...", description: "Show our aims"}]
   customCommands  Json?
 
+  // Full custom menu text — if set, completely replaces the default #help/#menu output
+  customMenuText  String? @db.Text
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -59,6 +59,7 @@ export default function BotSettingsPage() {
 
         // Custom Commands
         customCommands: [] as Array<{ command: string; response: string; description: string }>,
+        customMenuText: "",
     });
     const [botLoading, setBotLoading] = useState(false);
 
@@ -115,6 +116,7 @@ export default function BotSettingsPage() {
                         autoReplyBlockedJids: data.autoReplyBlockedJids || [],
                         antiLinkGroups: data.antiLinkGroups || [],
                         customCommands: data.customCommands || [],
+                        customMenuText: data.customMenuText || "",
                     }));
                 }
             })
@@ -821,6 +823,19 @@ export default function BotSettingsPage() {
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Custom Command
                             </Button>
+
+                            <div className="space-y-2 border-t border-border/50 pt-4">
+                                <Label className="font-semibold">Custom Menu Text (Override)</Label>
+                                <Textarea
+                                    placeholder={`Leave empty to use the default auto-generated menu.\n\nExample:\n🤖 *My Bot* 🤖\n\n#1 - Check our services\n#2 - Contact support\n#info - About us`}
+                                    className="min-h-[150px] font-mono text-sm"
+                                    value={botConfig.customMenuText}
+                                    onChange={(e) => setBotConfig(prev => ({ ...prev, customMenuText: e.target.value }))}
+                                />
+                                <p className="text-[10px] text-muted-foreground">
+                                    When filled, this text <strong>completely replaces</strong> the default menu shown on <code className="bg-muted px-1 rounded">{botConfig.prefix}help</code> / <code className="bg-muted px-1 rounded">{botConfig.prefix}menu</code>. Leave empty to use the default menu with custom commands appended. Supports WhatsApp formatting (*bold*, _italic_).
+                                </p>
+                            </div>
 
                             {botConfig.customCommands.length > 0 && (
                                 <p className="text-xs text-muted-foreground border-l-2 border-emerald-500/50 pl-3 py-1 bg-emerald-500/5 rounded">

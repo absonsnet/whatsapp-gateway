@@ -444,6 +444,11 @@ export async function handleBotCommand(
 
             case "menu":
             case "help": {
+                // If user set a fully custom menu, use it directly
+                if ((config as any).customMenuText) {
+                    await sock.sendMessage(remoteJid, { text: (config as any).customMenuText }, { quoted: msg });
+                    break;
+                }
                 const botName = (config as any).botName || "WA-AKG Bot";
                 let menu = `
 🤖 *${botName} Menu* 🤖

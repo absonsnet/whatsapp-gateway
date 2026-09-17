@@ -60,6 +60,7 @@ export async function GET(
             antiLinkScope: "ALL",
             antiLinkGroups: [],
             customCommands: [],
+            customMenuText: null,
         };
 
         return NextResponse.json({ status: true, message: "Bot config fetched successfully", data: session.botConfig });
@@ -124,6 +125,7 @@ export async function POST(
             "antiLinkScope",
             "antiLinkGroups",
             "customCommands",
+            "customMenuText",
         ];
         for (const key of passthrough) {
             if (body[key] !== undefined) updateFields[key] = body[key];
