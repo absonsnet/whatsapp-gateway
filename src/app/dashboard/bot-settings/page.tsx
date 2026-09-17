@@ -16,7 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Save, AlertCircle, Bot, X, Plus, ShieldCheck, Zap, UserCheck, MessageSquarePlus } from "lucide-react";
+import { RefreshCw, Save, AlertCircle, Bot, X, Plus, ShieldCheck, Zap, UserCheck, MessageSquarePlus, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import { SessionGuard } from "@/components/dashboard/session-guard";
 
@@ -56,6 +56,9 @@ export default function BotSettingsPage() {
         antiLinkLimit: 3,
         antiLinkScope: "ALL" as "ALL" | "SPECIFIC",
         antiLinkGroups: [] as string[],
+
+        // Custom Commands
+        customCommands: [] as Array<{ command: string; response: string; description: string }>,
     });
     const [botLoading, setBotLoading] = useState(false);
 
@@ -111,6 +114,7 @@ export default function BotSettingsPage() {
                         autoReplyAllowedJids: data.autoReplyAllowedJids || [],
                         autoReplyBlockedJids: data.autoReplyBlockedJids || [],
                         antiLinkGroups: data.antiLinkGroups || [],
+                        customCommands: data.customCommands || [],
                     }));
                 }
             })
@@ -733,6 +737,101 @@ export default function BotSettingsPage() {
                                 <Button onClick={handleSaveBot} disabled={botLoading || !sessionId}>
                                     {botLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                     Save Anti-Link Settings
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Custom Bot Commands */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Terminal className="h-5 w-5 text-emerald-500" />
+                                Custom Bot Commands
+                            </CardTitle>
+                            <CardDescription>
+                                Define your own commands (e.g. <code className="bg-muted px-1 rounded">{botConfig.prefix}info</code>, <code className="bg-muted px-1 rounded">{botConfig.prefix}aims</code>) that appear in the <code className="bg-muted px-1 rounded">{botConfig.prefix}help</code> menu.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {botConfig.customCommands.map((cc, idx) => (
+                                <div key={idx} className="border rounded-lg p-4 space-y-3 relative bg-muted/10">
+                                    <button
+                                        type="button"
+                                        className="absolute top-2 right-2 text-muted-foreground hover:text-destructive transition-colors"
+                                        onClick={() => setBotConfig(prev => ({
+                                            ...prev,
+                                            customCommands: prev.customCommands.filter((_, i) => i !== idx)
+                                        }))}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                    <div className="grid sm:grid-cols-2 gap-3">
+                                        <div className="grid gap-1">
+                                            <Label className="text-xs">Command (without prefix)</Label>
+                                            <Input
+                                                placeholder="e.g. info"
+                                                value={cc.command}
+                                                onChange={(e) => {
+                                                    const updated = [...botConfig.customCommands];
+                                                    updated[idx] = { ...updated[idx], command: e.target.value.replace(/\s/g, '').toLowerCase() };
+                                                    setBotConfig(prev => ({ ...prev, customCommands: updated }));
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="grid gap-1">
+                                            <Label className="text-xs">Menu Description (optional)</Label>
+                                            <Input
+                                                placeholder="e.g. Show company info"
+                                                value={cc.description}
+                                                onChange={(e) => {
+                                                    const updated = [...botConfig.customCommands];
+                                                    updated[idx] = { ...updated[idx], description: e.target.value };
+                                                    setBotConfig(prev => ({ ...prev, customCommands: updated }));
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-1">
+                                        <Label className="text-xs">Response Message</Label>
+                                        <Textarea
+                                            placeholder="The text the bot will reply with..."
+                                            className="min-h-[80px]"
+                                            value={cc.response}
+                                            onChange={(e) => {
+                                                const updated = [...botConfig.customCommands];
+                                                updated[idx] = { ...updated[idx], response: e.target.value };
+                                                setBotConfig(prev => ({ ...prev, customCommands: updated }));
+                                            }}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground">Users will type <strong>{botConfig.prefix}{cc.command || '...'}</strong> to get this response.</p>
+                                </div>
+                            ))}
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full border-dashed"
+                                onClick={() => setBotConfig(prev => ({
+                                    ...prev,
+                                    customCommands: [...prev.customCommands, { command: '', response: '', description: '' }]
+                                }))}
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Custom Command
+                            </Button>
+
+                            {botConfig.customCommands.length > 0 && (
+                                <p className="text-xs text-muted-foreground border-l-2 border-emerald-500/50 pl-3 py-1 bg-emerald-500/5 rounded">
+                                    ℹ️ Built-in commands (ping, sticker, etc.) always take priority. Custom commands cannot override them.
+                                </p>
+                            )}
+
+                            <div className="pt-2">
+                                <Button className="w-full sm:w-auto" onClick={handleSaveBot} disabled={botLoading || !sessionId}>
+                                    {botLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    Save Custom Commands
                                 </Button>
                             </div>
                         </CardContent>

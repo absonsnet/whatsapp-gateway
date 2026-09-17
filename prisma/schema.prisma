@@ -303,6 +303,10 @@ model BotConfig {
   antiLinkScope   String  @default("ALL") // ALL = active in every group, SPECIFIC = only listed groups
   antiLinkGroups  Json?   // Array of group JIDs when scope=SPECIFIC, e.g. ["123@g.us"]
 
+  // Custom bot commands — user-defined menu items
+  // Format: [{command: "aims", response: "Our aims are...", description: "Show our aims"}]
+  customCommands  Json?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

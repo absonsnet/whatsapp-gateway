@@ -445,7 +445,7 @@ export async function handleBotCommand(
             case "menu":
             case "help": {
                 const botName = (config as any).botName || "WA-AKG Bot";
-                const menu = `
+                let menu = `
 🤖 *${botName} Menu* 🤖
 
 📌 *Commands:*
@@ -463,9 +463,18 @@ export async function handleBotCommand(
 • *${prefix}add* <number>: Add member
 • *${prefix}promote* / *${prefix}demote* (tag/reply): Make/remove admin
 • *${prefix}open* / *${prefix}close*: Open/close group
-
-_Made with ❤️_
 `;
+                // Append custom commands to menu
+                const customCmds = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
+                if (customCmds.length > 0) {
+                    menu += `\n📋 *Custom Commands:*\n`;
+                    for (const cc of customCmds) {
+                        if (cc.command) {
+                            menu += `• *${prefix}${cc.command}*${cc.description ? `: ${cc.description}` : ""}\n`;
+                        }
+                    }
+                }
+                menu += `\n_Made with ❤️_`;
                 await sock.sendMessage(remoteJid, { text: menu }, { quoted: msg });
                 break;
             }
@@ -595,9 +604,15 @@ _Made with ❤️_
                 break;
             }
 
-            default:
-                // Ignore unknown commands
+            default: {
+                // Check custom commands
+                const customCommands = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
+                const matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === cmd);
+                if (matched && matched.response) {
+                    await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+                }
                 break;
+            }
         }
     } catch (e) {
         logger.error("Bot", "Bot command error", e);
