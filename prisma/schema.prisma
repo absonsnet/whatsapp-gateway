@@ -309,6 +309,7 @@ model BotConfig {
 
   // Full custom menu text — if set, completely replaces the default #help/#menu output
   customMenuText  String? @db.Text
+  autoAppendCommands Boolean @default(true) // Auto-append custom commands to menu text
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

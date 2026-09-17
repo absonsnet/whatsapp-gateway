@@ -60,6 +60,7 @@ export default function BotSettingsPage() {
         // Custom Commands
         customCommands: [] as Array<{ command: string; response: string; description: string }>,
         customMenuText: "",
+        autoAppendCommands: true,
     });
     const [botLoading, setBotLoading] = useState(false);
 
@@ -117,6 +118,7 @@ export default function BotSettingsPage() {
                         antiLinkGroups: data.antiLinkGroups || [],
                         customCommands: data.customCommands || [],
                         customMenuText: data.customMenuText || "",
+                        autoAppendCommands: data.autoAppendCommands ?? true,
                     }));
                 }
             })
@@ -756,59 +758,85 @@ export default function BotSettingsPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label className="font-semibold">Menu Description / Header</Label>
+                                <Textarea
+                                    placeholder={`Leave empty to use the default auto-generated menu.\n\nExample:\n🤖 *My Bot* 🤖\n\n📌 *Available Commands:*`}
+                                    className="min-h-[120px] font-mono text-sm"
+                                    value={botConfig.customMenuText}
+                                    onChange={(e) => setBotConfig(prev => ({ ...prev, customMenuText: e.target.value }))}
+                                />
+                                <p className="text-[10px] text-muted-foreground">
+                                    This text is used as the menu header on <code className="bg-muted px-1 rounded">{botConfig.prefix}help</code>. Leave empty to use the default built-in menu. Supports WhatsApp formatting (*bold*, _italic_).
+                                </p>
+                            </div>
+
+                            <div className="flex items-center justify-between space-x-2 border p-3 rounded-lg">
+                                <Label htmlFor="auto-append-cmds" className="flex flex-col space-y-1 cursor-pointer">
+                                    <span className="font-medium">Auto-Append Commands to Menu</span>
+                                    <span className="font-normal text-[10px] text-muted-foreground">When enabled, custom commands below are automatically listed in the {botConfig.prefix}help menu. Disable if you want full control over the menu text above.</span>
+                                </Label>
+                                <Switch id="auto-append-cmds" checked={botConfig.autoAppendCommands}
+                                    onCheckedChange={c => setBotConfig(prev => ({ ...prev, autoAppendCommands: c }))} />
+                            </div>
+
                             {botConfig.customCommands.map((cc, idx) => (
-                                <div key={idx} className="border rounded-lg p-4 space-y-3 relative bg-muted/10">
-                                    <button
-                                        type="button"
-                                        className="absolute top-2 right-2 text-muted-foreground hover:text-destructive transition-colors"
-                                        onClick={() => setBotConfig(prev => ({
-                                            ...prev,
-                                            customCommands: prev.customCommands.filter((_, i) => i !== idx)
-                                        }))}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                    <div className="grid sm:grid-cols-2 gap-3">
+                                <details key={idx} className="border rounded-lg bg-muted/10 group">
+                                    <summary className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-muted/30 rounded-lg transition-colors">
+                                        <span className="text-sm font-medium">
+                                            {cc.command ? <><code className="bg-muted px-1.5 py-0.5 rounded">{botConfig.prefix}{cc.command}</code>{cc.description && <span className="text-muted-foreground ml-2">— {cc.description}</span>}</> : <span className="text-muted-foreground italic">New command (expand to edit)</span>}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="text-muted-foreground hover:text-destructive transition-colors ml-2 shrink-0"
+                                            onClick={(e) => { e.preventDefault(); setBotConfig(prev => ({ ...prev, customCommands: prev.customCommands.filter((_, i) => i !== idx) })); }}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </summary>
+                                    <div className="p-4 pt-2 space-y-3 border-t">
+                                        <div className="grid sm:grid-cols-2 gap-3">
+                                            <div className="grid gap-1">
+                                                <Label className="text-xs">Command (without prefix)</Label>
+                                                <Input
+                                                    placeholder="e.g. info"
+                                                    value={cc.command}
+                                                    onChange={(e) => {
+                                                        const updated = [...botConfig.customCommands];
+                                                        updated[idx] = { ...updated[idx], command: e.target.value.replace(/\s/g, '').toLowerCase() };
+                                                        setBotConfig(prev => ({ ...prev, customCommands: updated }));
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="grid gap-1">
+                                                <Label className="text-xs">Menu Description (optional)</Label>
+                                                <Input
+                                                    placeholder="e.g. Show company info"
+                                                    value={cc.description}
+                                                    onChange={(e) => {
+                                                        const updated = [...botConfig.customCommands];
+                                                        updated[idx] = { ...updated[idx], description: e.target.value };
+                                                        setBotConfig(prev => ({ ...prev, customCommands: updated }));
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
                                         <div className="grid gap-1">
-                                            <Label className="text-xs">Command (without prefix)</Label>
-                                            <Input
-                                                placeholder="e.g. info"
-                                                value={cc.command}
+                                            <Label className="text-xs">Response Message</Label>
+                                            <Textarea
+                                                placeholder="The text the bot will reply with..."
+                                                className="min-h-[80px]"
+                                                value={cc.response}
                                                 onChange={(e) => {
                                                     const updated = [...botConfig.customCommands];
-                                                    updated[idx] = { ...updated[idx], command: e.target.value.replace(/\s/g, '').toLowerCase() };
+                                                    updated[idx] = { ...updated[idx], response: e.target.value };
                                                     setBotConfig(prev => ({ ...prev, customCommands: updated }));
                                                 }}
                                             />
                                         </div>
-                                        <div className="grid gap-1">
-                                            <Label className="text-xs">Menu Description (optional)</Label>
-                                            <Input
-                                                placeholder="e.g. Show company info"
-                                                value={cc.description}
-                                                onChange={(e) => {
-                                                    const updated = [...botConfig.customCommands];
-                                                    updated[idx] = { ...updated[idx], description: e.target.value };
-                                                    setBotConfig(prev => ({ ...prev, customCommands: updated }));
-                                                }}
-                                            />
-                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">Users will type <strong>{botConfig.prefix}{cc.command || '...'}</strong> to get this response.</p>
                                     </div>
-                                    <div className="grid gap-1">
-                                        <Label className="text-xs">Response Message</Label>
-                                        <Textarea
-                                            placeholder="The text the bot will reply with..."
-                                            className="min-h-[80px]"
-                                            value={cc.response}
-                                            onChange={(e) => {
-                                                const updated = [...botConfig.customCommands];
-                                                updated[idx] = { ...updated[idx], response: e.target.value };
-                                                setBotConfig(prev => ({ ...prev, customCommands: updated }));
-                                            }}
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-muted-foreground">Users will type <strong>{botConfig.prefix}{cc.command || '...'}</strong> to get this response.</p>
-                                </div>
+                                </details>
                             ))}
 
                             <Button
@@ -823,19 +851,6 @@ export default function BotSettingsPage() {
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Custom Command
                             </Button>
-
-                            <div className="space-y-2 border-t border-border/50 pt-4">
-                                <Label className="font-semibold">Custom Menu Text (Override)</Label>
-                                <Textarea
-                                    placeholder={`Leave empty to use the default auto-generated menu.\n\nExample:\n🤖 *My Bot* 🤖\n\n#1 - Check our services\n#2 - Contact support\n#info - About us`}
-                                    className="min-h-[150px] font-mono text-sm"
-                                    value={botConfig.customMenuText}
-                                    onChange={(e) => setBotConfig(prev => ({ ...prev, customMenuText: e.target.value }))}
-                                />
-                                <p className="text-[10px] text-muted-foreground">
-                                    When filled, this text <strong>completely replaces</strong> the default menu shown on <code className="bg-muted px-1 rounded">{botConfig.prefix}help</code> / <code className="bg-muted px-1 rounded">{botConfig.prefix}menu</code>. Leave empty to use the default menu with custom commands appended. Supports WhatsApp formatting (*bold*, _italic_).
-                                </p>
-                            </div>
 
                             {botConfig.customCommands.length > 0 && (
                                 <p className="text-xs text-muted-foreground border-l-2 border-emerald-500/50 pl-3 py-1 bg-emerald-500/5 rounded">

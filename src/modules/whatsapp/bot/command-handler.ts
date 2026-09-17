@@ -444,9 +444,19 @@ export async function handleBotCommand(
 
             case "menu":
             case "help": {
-                // If user set a fully custom menu, use it directly
+                const customCmds = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
+                // If user set custom menu text, use it as base and append custom commands
                 if ((config as any).customMenuText) {
-                    await sock.sendMessage(remoteJid, { text: (config as any).customMenuText }, { quoted: msg });
+                    let menu = (config as any).customMenuText;
+                    if ((config as any).autoAppendCommands !== false && customCmds.length > 0) {
+                        menu += `\n`;
+                        for (const cc of customCmds) {
+                            if (cc.command) {
+                                menu += `• *${prefix}${cc.command}*${cc.description ? `: ${cc.description}` : ""}\n`;
+                            }
+                        }
+                    }
+                    await sock.sendMessage(remoteJid, { text: menu }, { quoted: msg });
                     break;
                 }
                 const botName = (config as any).botName || "WA-AKG Bot";
@@ -470,7 +480,6 @@ export async function handleBotCommand(
 • *${prefix}open* / *${prefix}close*: Open/close group
 `;
                 // Append custom commands to menu
-                const customCmds = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
                 if (customCmds.length > 0) {
                     menu += `\n📋 *Custom Commands:*\n`;
                     for (const cc of customCmds) {
