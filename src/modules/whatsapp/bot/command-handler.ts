@@ -9,6 +9,7 @@ import os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { logger } from "@/lib/logger";
+import { makeChatKey, getChatState, setChatState, clearChatState } from "./chat-state";
 
 const execAsync = promisify(exec);
 
@@ -202,9 +203,32 @@ export async function handleBotCommand(
 
     if (!config.enabled) return;
 
-    // Now check prefix with loaded config
     const prefix = (config as any).prefix || "#";
-    if (!text.startsWith(prefix)) return;
+    const isPrefixed = text.startsWith(prefix);
+    const chatKey = makeChatKey(sessionId, remoteJid);
+    const chatState = getChatState(chatKey);
+
+    // Livechat mode: skip everything unless prefixed (owner can still use commands)
+    if (chatState?.state === "livechat" && !isPrefixed) return;
+
+    // Handle bare menu replies (no prefix, but bot just sent a menu)
+    if (!isPrefixed && chatState?.state === "menu") {
+        const customCommands = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
+        const trimmed = text.trim().toLowerCase();
+        const matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed);
+        if (matched) {
+            if (matched.isLiveChat) {
+                const timeout = (config as any).liveChatTimeout || 30;
+                setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
+            }
+            if (matched.response) {
+                await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+            }
+        }
+        return;
+    }
+
+    if (!isPrefixed) return;
 
     // Verify Access Permissions
     const botMode = (config as any).botMode || 'OWNER'; // Default to OWNER if missing
@@ -457,6 +481,8 @@ export async function handleBotCommand(
                         }
                     }
                     await sock.sendMessage(remoteJid, { text: menu }, { quoted: msg });
+                    // Set menu state so user can reply with bare numbers
+                    if (customCmds.length > 0) setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
                     break;
                 }
                 const botName = (config as any).botName || "WA-AKG Bot";
@@ -490,6 +516,8 @@ export async function handleBotCommand(
                 }
                 menu += `\n_Made with ❤️_`;
                 await sock.sendMessage(remoteJid, { text: menu }, { quoted: msg });
+                // Set menu state so user can reply with bare numbers
+                if (customCmds.length > 0) setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
                 break;
             }
 
@@ -618,12 +646,28 @@ export async function handleBotCommand(
                 break;
             }
 
+            case "endchat": {
+                if (chatState?.state === "livechat") {
+                    clearChatState(chatKey);
+                    await sock.sendMessage(remoteJid, { text: "✅ Live chat ended. Bot is active again." }, { quoted: msg });
+                } else {
+                    await sock.sendMessage(remoteJid, { text: "ℹ️ No active live chat session." }, { quoted: msg });
+                }
+                break;
+            }
+
             default: {
                 // Check custom commands
                 const customCommands = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
                 const matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === cmd);
-                if (matched && matched.response) {
-                    await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+                if (matched) {
+                    if (matched.isLiveChat) {
+                        const timeout = (config as any).liveChatTimeout || 30;
+                        setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
+                    }
+                    if (matched.response) {
+                        await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+                    }
                 }
                 break;
             }

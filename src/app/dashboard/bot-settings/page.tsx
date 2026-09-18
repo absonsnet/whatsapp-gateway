@@ -16,7 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Save, AlertCircle, Bot, X, Plus, ShieldCheck, Zap, UserCheck, MessageSquarePlus, Terminal } from "lucide-react";
+import { RefreshCw, Save, AlertCircle, Bot, X, Plus, ShieldCheck, Zap, UserCheck, MessageSquarePlus, Terminal, ChevronUp, ChevronDown, Headphones } from "lucide-react";
 import { toast } from "sonner";
 import { SessionGuard } from "@/components/dashboard/session-guard";
 
@@ -58,9 +58,10 @@ export default function BotSettingsPage() {
         antiLinkGroups: [] as string[],
 
         // Custom Commands
-        customCommands: [] as Array<{ command: string; response: string; description: string }>,
+        customCommands: [] as Array<{ command: string; response: string; description: string; isLiveChat: boolean }>,
         customMenuText: "",
         autoAppendCommands: true,
+        liveChatTimeout: 30,
     });
     const [botLoading, setBotLoading] = useState(false);
 
@@ -119,6 +120,7 @@ export default function BotSettingsPage() {
                         customCommands: data.customCommands || [],
                         customMenuText: data.customMenuText || "",
                         autoAppendCommands: data.autoAppendCommands ?? true,
+                        liveChatTimeout: data.liveChatTimeout ?? 30,
                     }));
                 }
             })
@@ -781,25 +783,33 @@ export default function BotSettingsPage() {
                             </div>
 
                             {botConfig.customCommands.map((cc, idx) => (
-                                <details key={idx} className="border rounded-lg bg-muted/10 group">
+                                <details key={idx} className="border rounded-lg bg-muted/10 group" open={!cc.command}>
                                     <summary className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-muted/30 rounded-lg transition-colors">
-                                        <span className="text-sm font-medium">
-                                            {cc.command ? <><code className="bg-muted px-1.5 py-0.5 rounded">{botConfig.prefix}{cc.command}</code>{cc.description && <span className="text-muted-foreground ml-2">— {cc.description}</span>}</> : <span className="text-muted-foreground italic">New command (expand to edit)</span>}
+                                        <span className="text-sm font-medium flex items-center gap-2">
+                                            {cc.isLiveChat && <Headphones className="h-3.5 w-3.5 text-blue-500" />}
+                                            {cc.command ? <><code className="bg-muted px-1.5 py-0.5 rounded">{botConfig.prefix}{cc.command}</code>{cc.description && <span className="text-muted-foreground">— {cc.description}</span>}</> : <span className="text-muted-foreground italic">New command (expand to edit)</span>}
                                         </span>
-                                        <button
-                                            type="button"
-                                            className="text-muted-foreground hover:text-destructive transition-colors ml-2 shrink-0"
-                                            onClick={(e) => { e.preventDefault(); setBotConfig(prev => ({ ...prev, customCommands: prev.customCommands.filter((_, i) => i !== idx) })); }}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
+                                        <div className="flex items-center gap-1 ml-2 shrink-0">
+                                            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30" disabled={idx === 0}
+                                                onClick={(e) => { e.preventDefault(); const u = [...botConfig.customCommands]; [u[idx-1], u[idx]] = [u[idx], u[idx-1]]; setBotConfig(p => ({...p, customCommands: u})); }}>
+                                                <ChevronUp className="h-4 w-4" />
+                                            </button>
+                                            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30" disabled={idx === botConfig.customCommands.length - 1}
+                                                onClick={(e) => { e.preventDefault(); const u = [...botConfig.customCommands]; [u[idx], u[idx+1]] = [u[idx+1], u[idx]]; setBotConfig(p => ({...p, customCommands: u})); }}>
+                                                <ChevronDown className="h-4 w-4" />
+                                            </button>
+                                            <button type="button" className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                                                onClick={(e) => { e.preventDefault(); setBotConfig(p => ({...p, customCommands: p.customCommands.filter((_, i) => i !== idx)})); }}>
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
                                     </summary>
                                     <div className="p-4 pt-2 space-y-3 border-t">
                                         <div className="grid sm:grid-cols-2 gap-3">
                                             <div className="grid gap-1">
                                                 <Label className="text-xs">Command (without prefix)</Label>
                                                 <Input
-                                                    placeholder="e.g. info"
+                                                    placeholder="e.g. 1, info, aims"
                                                     value={cc.command}
                                                     onChange={(e) => {
                                                         const updated = [...botConfig.customCommands];
@@ -834,7 +844,19 @@ export default function BotSettingsPage() {
                                                 }}
                                             />
                                         </div>
-                                        <p className="text-[10px] text-muted-foreground">Users will type <strong>{botConfig.prefix}{cc.command || '...'}</strong> to get this response.</p>
+                                        <div className="flex items-center justify-between space-x-2 border p-3 rounded-lg bg-blue-500/5 border-blue-500/20">
+                                            <Label htmlFor={`livechat-${idx}`} className="flex flex-col space-y-1 cursor-pointer">
+                                                <span className="font-medium flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5" /> Live Chat</span>
+                                                <span className="font-normal text-[10px] text-muted-foreground">When triggered, bot pauses for this chat and a human can respond. Resumes after timeout or {botConfig.prefix}endchat.</span>
+                                            </Label>
+                                            <Switch id={`livechat-${idx}`} checked={cc.isLiveChat || false}
+                                                onCheckedChange={(c) => {
+                                                    const updated = [...botConfig.customCommands];
+                                                    updated[idx] = { ...updated[idx], isLiveChat: c };
+                                                    setBotConfig(prev => ({ ...prev, customCommands: updated }));
+                                                }} />
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">Users can type <strong>{botConfig.prefix}{cc.command || '...'}</strong> or reply <strong>{cc.command || '...'}</strong> after viewing the menu.</p>
                                     </div>
                                 </details>
                             ))}
@@ -845,16 +867,32 @@ export default function BotSettingsPage() {
                                 className="w-full border-dashed"
                                 onClick={() => setBotConfig(prev => ({
                                     ...prev,
-                                    customCommands: [...prev.customCommands, { command: '', response: '', description: '' }]
+                                    customCommands: [...prev.customCommands, { command: '', response: '', description: '', isLiveChat: false }]
                                 }))}
                             >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Custom Command
                             </Button>
 
+                            <div className="grid gap-2 border-t border-border/50 pt-4">
+                                <Label className="font-semibold flex items-center gap-1.5"><Headphones className="h-4 w-4" /> Live Chat Timeout</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="number"
+                                        className="max-w-[120px]"
+                                        min={1}
+                                        max={1440}
+                                        value={botConfig.liveChatTimeout}
+                                        onChange={(e) => setBotConfig(prev => ({ ...prev, liveChatTimeout: Math.max(1, parseInt(e.target.value) || 30) }))}
+                                    />
+                                    <span className="text-sm text-muted-foreground">minutes</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">How long the bot stays paused after a live chat command is triggered. Use <code className="bg-muted px-1 rounded">{botConfig.prefix}endchat</code> to resume early.</p>
+                            </div>
+
                             {botConfig.customCommands.length > 0 && (
                                 <p className="text-xs text-muted-foreground border-l-2 border-emerald-500/50 pl-3 py-1 bg-emerald-500/5 rounded">
-                                    ℹ️ Built-in commands (ping, sticker, etc.) always take priority. Custom commands cannot override them.
+                                    ℹ️ Built-in commands (ping, sticker, etc.) always take priority. After {botConfig.prefix}menu, users can reply with just the command name (no prefix needed).
                                 </p>
                             )}
 
