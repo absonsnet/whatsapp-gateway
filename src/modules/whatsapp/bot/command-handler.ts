@@ -211,21 +211,51 @@ export async function handleBotCommand(
     // Livechat mode: skip everything unless prefixed (owner can still use commands)
     if (chatState?.state === "livechat" && !isPrefixed) return;
 
-    // Handle bare menu replies (no prefix, but bot just sent a menu)
-    if (!isPrefixed && chatState?.state === "menu") {
+    // Handle bare menu/submenu replies (no prefix, context-aware)
+    if (!isPrefixed && (chatState?.state === "menu" || chatState?.state === "submenu")) {
         const customCommands = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
         const trimmed = text.trim().toLowerCase();
-        const matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed);
-        if (matched) {
-            if (matched.isLiveChat) {
-                const timeout = (config as any).liveChatTimeout || 30;
-                setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
+
+        // "back" or "0" → return to main menu
+        if (chatState.state === "submenu" && (trimmed === "back" || trimmed === "0")) {
+            setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
+            // Re-send main menu
+            const helpCmd = "menu";
+            // Trigger the menu command by setting text and falling through
+            text = `${prefix}${helpCmd}`;
+            // Don't return — let it fall through to prefixed handling below
+        } else {
+            let matched: any = null;
+
+            if (chatState.state === "submenu" && chatState.parentCommand) {
+                // In submenu → check parent command's subCommands first
+                const parent = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === chatState.parentCommand);
+                const subs = Array.isArray(parent?.subCommands) ? parent.subCommands : [];
+                matched = subs.find((sc: any) => sc.command && sc.command.toLowerCase() === trimmed);
             }
-            if (matched.response) {
-                await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+
+            // If no submenu match, check top-level commands
+            if (!matched) {
+                matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed);
             }
+
+            if (matched) {
+                if (matched.isLiveChat) {
+                    const timeout = (config as any).liveChatTimeout || 30;
+                    setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
+                } else if (Array.isArray(matched.subCommands) && matched.subCommands.length > 0) {
+                    // Command has sub-commands → enter submenu state
+                    setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, matched.command.toLowerCase());
+                } else {
+                    // Regular response → stay in menu state
+                    setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
+                }
+                if (matched.response) {
+                    await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+                }
+            }
+            return;
         }
-        return;
     }
 
     if (!isPrefixed) return;
@@ -664,6 +694,8 @@ export async function handleBotCommand(
                     if (matched.isLiveChat) {
                         const timeout = (config as any).liveChatTimeout || 30;
                         setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
+                    } else if (Array.isArray(matched.subCommands) && matched.subCommands.length > 0) {
+                        setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, matched.command.toLowerCase());
                     }
                     if (matched.response) {
                         await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });

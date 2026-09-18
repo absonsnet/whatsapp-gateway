@@ -58,7 +58,7 @@ export default function BotSettingsPage() {
         antiLinkGroups: [] as string[],
 
         // Custom Commands
-        customCommands: [] as Array<{ command: string; response: string; description: string; isLiveChat: boolean }>,
+        customCommands: [] as Array<{ command: string; response: string; description: string; isLiveChat: boolean; subCommands: Array<{ command: string; response: string; description: string; isLiveChat: boolean }> }>,
         customMenuText: "",
         autoAppendCommands: true,
         liveChatTimeout: 30,
@@ -117,7 +117,7 @@ export default function BotSettingsPage() {
                         autoReplyAllowedJids: data.autoReplyAllowedJids || [],
                         autoReplyBlockedJids: data.autoReplyBlockedJids || [],
                         antiLinkGroups: data.antiLinkGroups || [],
-                        customCommands: data.customCommands || [],
+                        customCommands: (data.customCommands || []).map((cc: any) => ({ ...cc, subCommands: cc.subCommands || [] })),
                         customMenuText: data.customMenuText || "",
                         autoAppendCommands: data.autoAppendCommands ?? true,
                         liveChatTimeout: data.liveChatTimeout ?? 30,
@@ -856,6 +856,76 @@ export default function BotSettingsPage() {
                                                     setBotConfig(prev => ({ ...prev, customCommands: updated }));
                                                 }} />
                                         </div>
+
+                                        {/* Sub-Commands */}
+                                        {!cc.isLiveChat && (
+                                            <details className="border rounded-lg bg-background/50">
+                                                <summary className="p-2.5 cursor-pointer select-none text-xs font-medium hover:bg-muted/30 rounded-lg transition-colors flex items-center justify-between">
+                                                    <span>Sub-Commands ({(cc.subCommands || []).length})</span>
+                                                    <span className="text-[10px] text-muted-foreground">Nested menu — shown after user picks this command</span>
+                                                </summary>
+                                                <div className="p-3 space-y-2 border-t">
+                                                    {(cc.subCommands || []).map((sc, sIdx) => (
+                                                        <div key={sIdx} className="grid grid-cols-[1fr_1fr_2fr_auto] gap-2 items-start">
+                                                            <Input
+                                                                placeholder="cmd"
+                                                                className="text-xs h-8"
+                                                                value={sc.command}
+                                                                onChange={(e) => {
+                                                                    const cmds = [...botConfig.customCommands];
+                                                                    const subs = [...(cmds[idx].subCommands || [])];
+                                                                    subs[sIdx] = { ...subs[sIdx], command: e.target.value.replace(/\s/g, '').toLowerCase() };
+                                                                    cmds[idx] = { ...cmds[idx], subCommands: subs };
+                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
+                                                                }}
+                                                            />
+                                                            <Input
+                                                                placeholder="description"
+                                                                className="text-xs h-8"
+                                                                value={sc.description}
+                                                                onChange={(e) => {
+                                                                    const cmds = [...botConfig.customCommands];
+                                                                    const subs = [...(cmds[idx].subCommands || [])];
+                                                                    subs[sIdx] = { ...subs[sIdx], description: e.target.value };
+                                                                    cmds[idx] = { ...cmds[idx], subCommands: subs };
+                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
+                                                                }}
+                                                            />
+                                                            <Input
+                                                                placeholder="response text"
+                                                                className="text-xs h-8"
+                                                                value={sc.response}
+                                                                onChange={(e) => {
+                                                                    const cmds = [...botConfig.customCommands];
+                                                                    const subs = [...(cmds[idx].subCommands || [])];
+                                                                    subs[sIdx] = { ...subs[sIdx], response: e.target.value };
+                                                                    cmds[idx] = { ...cmds[idx], subCommands: subs };
+                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
+                                                                }}
+                                                            />
+                                                            <button type="button" className="text-muted-foreground hover:text-destructive transition-colors h-8 px-1"
+                                                                onClick={() => {
+                                                                    const cmds = [...botConfig.customCommands];
+                                                                    cmds[idx] = { ...cmds[idx], subCommands: (cmds[idx].subCommands || []).filter((_, i) => i !== sIdx) };
+                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
+                                                                }}>
+                                                                <X className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-xs h-7"
+                                                        onClick={() => {
+                                                            const cmds = [...botConfig.customCommands];
+                                                            cmds[idx] = { ...cmds[idx], subCommands: [...(cmds[idx].subCommands || []), { command: '', response: '', description: '', isLiveChat: false }] };
+                                                            setBotConfig(p => ({ ...p, customCommands: cmds }));
+                                                        }}>
+                                                        <Plus className="h-3 w-3 mr-1" /> Add Sub-Command
+                                                    </Button>
+                                                    <p className="text-[10px] text-muted-foreground">When user picks <strong>{botConfig.prefix}{cc.command || '...'}</strong>, your response above is sent. Then they can reply with a sub-command. Type <strong>0</strong> or <strong>back</strong> to return to main menu.</p>
+                                                </div>
+                                            </details>
+                                        )}
+
                                         <p className="text-[10px] text-muted-foreground">Users can type <strong>{botConfig.prefix}{cc.command || '...'}</strong> or reply <strong>{cc.command || '...'}</strong> after viewing the menu.</p>
                                     </div>
                                 </details>
@@ -867,7 +937,7 @@ export default function BotSettingsPage() {
                                 className="w-full border-dashed"
                                 onClick={() => setBotConfig(prev => ({
                                     ...prev,
-                                    customCommands: [...prev.customCommands, { command: '', response: '', description: '', isLiveChat: false }]
+                                    customCommands: [...prev.customCommands, { command: '', response: '', description: '', isLiveChat: false, subCommands: [] }]
                                 }))}
                             >
                                 <Plus className="h-4 w-4 mr-2" />

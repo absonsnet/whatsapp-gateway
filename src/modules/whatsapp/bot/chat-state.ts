@@ -6,10 +6,11 @@
  * ~200 bytes per entry. 10k active chats ≈ 2MB RAM. Negligible.
  */
 
-export type ChatStateType = "menu" | "livechat";
+export type ChatStateType = "menu" | "livechat" | "submenu";
 
 interface ChatState {
     state: ChatStateType;
+    parentCommand?: string; // tracks which command's sub-menu we're in
     expiresAt: number;
 }
 
@@ -28,8 +29,8 @@ export function makeChatKey(sessionId: string, remoteJid: string): string {
     return `${sessionId}:${remoteJid}`;
 }
 
-export function setChatState(key: string, state: ChatStateType, expiresAt: number): void {
-    states.set(key, { state, expiresAt });
+export function setChatState(key: string, state: ChatStateType, expiresAt: number, parentCommand?: string): void {
+    states.set(key, { state, expiresAt, parentCommand });
 }
 
 export function getChatState(key: string): ChatState | null {
