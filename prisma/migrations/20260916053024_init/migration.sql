@@ -223,10 +223,10 @@ CREATE TABLE "BotConfig" (
 -- CreateTable
 CREATE TABLE "SystemConfig" (
     "id" TEXT NOT NULL DEFAULT 'default',
-    "appName" TEXT NOT NULL DEFAULT 'WA-AKG',
+    "appName" TEXT NOT NULL DEFAULT 'WhatsApp Panel',
     "logoUrl" TEXT,
     "faviconUrl" TEXT,
-    "timezone" TEXT NOT NULL DEFAULT 'Asia/Jakarta',
+    "timezone" TEXT NOT NULL DEFAULT 'Asia/Karachi',
     "enableRegistration" BOOLEAN NOT NULL DEFAULT true,
     "klikqrisBaseUrl" TEXT DEFAULT 'https://klikqris.com/api',
     "klikqrisApiKey" TEXT,

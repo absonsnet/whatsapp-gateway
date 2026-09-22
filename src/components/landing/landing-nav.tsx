@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Bot, Github, Menu, X } from "lucide-react";
+import { Github, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function LandingNav() {
@@ -36,9 +37,8 @@ export function LandingNav() {
             <header className="fixed top-4 inset-x-4 md:inset-x-auto md:top-6 md:left-1/2 md:-translate-x-1/2 z-50 md:w-full md:max-w-5xl transition-all duration-300">
                 <div className="glass rounded-full px-4 md:px-8 h-14 md:h-16 flex items-center justify-between mx-auto shadow-lg shadow-black/5 dark:shadow-black/20 border border-white/40 dark:border-white/10">
                     <Link href="/" className="flex items-center gap-3 font-bold text-xl shrink-0">
-                        <div className="relative flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-primary text-white shadow-inner">
-                            <Bot className="h-5 w-5 md:h-6 md:w-6" />
-                            <div className="absolute inset-0 rounded-full bg-primary blur-md -z-10 opacity-50 animate-pulse-glow" />
+                        <div className="relative h-8 w-8 md:h-10 md:w-10 overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-lg shadow-primary/10">
+                            <Image src="/logo.svg" alt="RifalosID logo" width={40} height={40} className="h-full w-full object-cover" />
                         </div>
                         <span className="text-foreground tracking-tight" translate="no">RifalosID</span>
                     </Link>

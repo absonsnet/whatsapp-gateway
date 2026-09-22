@@ -17,6 +17,7 @@ export default function SettingsPage() {
 
     const [systemConfig, setSystemConfig] = useState({
         appName: "WA-AKG",
+        description: "WhatsApp Gateway & Management Dashboard",
         logoUrl: "",
         timezone: "Asia/Jakarta",
         enableRegistration: true,
@@ -51,9 +52,10 @@ export default function SettingsPage() {
                 if (data && !responseData.error) {
                     setSystemConfig({
                         appName: data.appName || "WA-AKG",
+                        description: data.description || "WhatsApp Gateway & Management Dashboard",
                         logoUrl: data.logoUrl || "",
                         // @ts-ignore
-                        faviconUrl: data.faviconUrl || "/favicon.ico",
+                        faviconUrl: data.faviconUrl || "/favicon.svg",
                         timezone: data.timezone || "Asia/Jakarta",
                         enableRegistration: data.enableRegistration !== undefined ? data.enableRegistration : true,
                         allowLocalStorage: data.allowLocalStorage || false,
@@ -186,6 +188,18 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
+                    <div className="grid gap-2">
+                        <Label>Browser Tab Description</Label>
+                        <textarea
+                            className={`${inputClass} min-h-[90px]`}
+                            placeholder="WhatsApp Gateway & Management Dashboard"
+                            value={systemConfig.description}
+                            onChange={(e) => setSystemConfig(prev => ({ ...prev, description: e.target.value }))}
+                            disabled={!isSuperAdmin}
+                        />
+                        <p className="text-xs text-muted-foreground">This text is used for the browser tab description and social preview metadata.</p>
+                    </div>
+
                     <div className="grid sm:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label>Logo URL</Label>
@@ -202,7 +216,7 @@ export default function SettingsPage() {
                             <Label>Favicon URL</Label>
                             <input
                                 className={inputClass}
-                                placeholder="/favicon.ico"
+                                placeholder="/favicon.svg"
                                 value={(systemConfig as any).faviconUrl || ""}
                                 onChange={(e) => setSystemConfig(prev => ({ ...prev, faviconUrl: e.target.value }))}
                                 disabled={!isSuperAdmin}

@@ -6,20 +6,33 @@ import { PricingCards } from "@/components/landing/pricing";
 import { headers } from "next/headers";
 import fs from "fs";
 import path from "path";
+import { prisma } from "@/lib/prisma";
 
 // Harga plan bisa diubah SUPERADMIN dan disimpan di DB. Halaman ini HARUS dynamic
 // supaya selalu membaca harga terbaru, bukan versi statis hasil build.
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "RifalosID | Premium WhatsApp Gateway",
-  description: "A powerful, self-hosted dashboard to manage your WhatsApp sessions, schedules, and auto-replies. Built for modern businesses.",
-  openGraph: {
-    title: "RifalosID | Premium WhatsApp Gateway",
-    description: "Self-hosted WhatsApp Gateway with Multi-device support, Auto-replies, and API integration.",
-    type: "website",
-  },
-};
+export async function generateMetadata() {
+  const config = await prisma.systemConfig.findUnique({
+    where: { id: "default" },
+    select: { appName: true, description: true },
+  }).catch(() => null);
+
+  const appName = config?.appName || process.env.APP_NAME || "WA-AKG";
+  const description = config?.description || process.env.APP_DESCRIPTION || "WhatsApp Gateway & Management Dashboard";
+
+  const tabTitle = description ? `${appName} | ${description}` : appName;
+
+  return {
+    title: tabTitle,
+    description,
+    openGraph: {
+      title: tabTitle,
+      description,
+      type: "website",
+    },
+  };
+}
 
 export default async function Home() {
   const packagePath = path.join(process.cwd(), "package.json");

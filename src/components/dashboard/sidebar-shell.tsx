@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { SidebarNav } from "./sidebar-nav";
 import { useSidebar } from "./sidebar-context";
 import { Button } from "@/components/ui/button";
@@ -30,17 +31,22 @@ export function SidebarShell({ appName, userName, userEmail, version }: SidebarS
             <div className={`border-b border-border/30 transition-all duration-300 ${isCollapsed ? "px-3 py-4" : "px-5 py-5"}`}>
                 {isCollapsed ? (
                     <div className="flex justify-center">
-                        <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                            {appName.charAt(0)}
+                        <div className="h-9 w-9 overflow-hidden rounded-lg border border-white/20 bg-white/10 shadow-md shadow-primary/10">
+                            <Image src="/logo.svg" alt="App logo" width={36} height={36} className="h-full w-full object-cover" />
                         </div>
                     </div>
                 ) : (
-                    <>
-                        <h1 className="text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500" translate="no">
-                            {appName}
-                        </h1>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">WhatsApp Gateway</p>
-                    </>
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 overflow-hidden rounded-xl border border-white/20 bg-white/10 shadow-md shadow-primary/10 shrink-0">
+                            <Image src="/logo.svg" alt="App logo" width={40} height={40} className="h-full w-full object-cover" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500" translate="no">
+                                {appName}
+                            </h1>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">WhatsApp Gateway</p>
+                        </div>
+                    </div>
                 )}
             </div>
 

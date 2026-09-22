@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from "next/image";
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -16,7 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Bot, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 import Link from 'next/link';
 
 const formSchema = z.object({
@@ -71,8 +72,8 @@ function LoginForm() {
 
       <div className="relative z-10 w-full max-w-md p-4 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="relative flex h-16 w-16 mb-4 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-primary text-white shadow-lg shadow-primary/30 hover:scale-105 transition-transform cursor-pointer">
-            <Bot className="h-8 w-8" />
+          <Link href="/" className="relative mb-4 block overflow-hidden rounded-2xl border border-white/20 bg-white/10 shadow-lg shadow-primary/20 transition-transform hover:scale-105">
+            <Image src="/logo.svg" alt="RifalosID logo" width={64} height={64} className="h-16 w-16 object-cover" />
           </Link>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome Back</h1>
           <p className="text-muted-foreground mt-2">Sign in to your account</p>
