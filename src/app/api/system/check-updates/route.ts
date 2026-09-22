@@ -5,16 +5,16 @@ import { getAuthenticatedUser } from "@/lib/api-auth";
 // ============================================================
 // UPSTREAM UPDATE CHECK DIMATIKAN (manual update only)
 // ------------------------------------------------------------
-// Sebelumnya route ini polling release dari repo lain
+// Previously this route polled releases from another repository.
 // (vinsaeroy/WA-AKG) lewat getLatestRelease(). Akibatnya tiap
 // repo upstream rilis versi baru, instance ini ikut kena
 // notifikasi/terdorong update.
 //
-// Sesuai permintaan: putuskan dari repo lain supaya perubahan di
-// sana TIDAK ikut mengubah di sini. Update dilakukan manual lalu
+// Per request: disconnect it from the other repository so changes there
+// do NOT affect this application. Updates are performed manually, then
 // baru di-push ke main repo sendiri.
 //
-// Kalau suatu saat mau mengaktifkan lagi (mis. cek repo sendiri),
+// If this is enabled again in the future (for example, to check this repository),
 // import { getLatestRelease } from "@/lib/github" dan { prisma }
 // from "@/lib/prisma", lalu kembalikan logika notifikasi di bawah.
 // ============================================================
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // Tidak melakukan request apa pun ke GitHub / repo upstream.
+    // Do not make any requests to GitHub or an upstream repository.
     return NextResponse.json({
         status: true,
         message: "Update check is disabled (manual update mode)",

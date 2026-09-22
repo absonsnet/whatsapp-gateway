@@ -15,14 +15,14 @@ export async function GET() {
         });
 
         const stored = user?.apiKey || null;
-        // Key baru disimpan ter-hash → tidak bisa ditampilkan lagi (hanya sekali saat generate).
-        // Key lama (legacy plaintext) masih bisa ditampilkan sampai user generate ulang.
+        // New keys are stored hashed and cannot be displayed again (shown only once during generation).
+        // Legacy plaintext keys can still be displayed until the user generates a new one.
         const hashed = isHashedApiKey(stored);
         return NextResponse.json({
             status: true,
             message: "API key fetched",
             data: {
-                apiKey: hashed ? null : stored, // null kalau sudah ter-hash
+                apiKey: hashed ? null : stored, // null when already hashed
                 apiKeySet: !!stored,
                 hidden: hashed
             }
@@ -40,7 +40,7 @@ export async function POST() {
     try {
         const newApiKey = generateApiKey();
 
-        // Simpan HASH-nya saja di DB. Plaintext hanya dikembalikan sekali di response ini.
+        // Store only the HASH in the database. Plaintext is returned only once in this response.
         await prisma.user.update({
             where: { id: session.user.id },
             data: { apiKey: hashApiKey(newApiKey) }

@@ -4,10 +4,10 @@ import { authConfig } from "./src/auth.config";
 
 const authMiddleware = NextAuth(authConfig).auth;
 
-// Public URL untuk normalisasi redirect.
-// Diambil dari HOST ASLI request: forwarded header (di belakang proxy/prod)
-// atau origin request (lokal = localhost). TIDAK hardcode domain, supaya
-// saat dijalankan lokal redirect tetap ke localhost, saat prod ikut domain.
+// Public URL for redirect normalization.
+// Read from the request's original host: forwarded header (behind a proxy/production)
+// or the request origin (local = localhost). Do not hardcode a domain so local
+// redirects stay on localhost while production follows its current domain.
 function getPublicUrl(request: NextRequest): string {
     const fwdHost = request.headers.get("x-forwarded-host");
     if (fwdHost) {
@@ -16,7 +16,7 @@ function getPublicUrl(request: NextRequest): string {
     }
 
     const origin = request.nextUrl.origin;
-    // Hanya kalau origin bind-all (0.0.0.0) yang tak bisa di-redirect: pakai env, lalu localhost.
+    // Only when the origin binds to all interfaces (0.0.0.0) and cannot redirect: use env, then localhost.
     if (/^https?:\/\/0\.0\.0\.0(:\d+)?$/i.test(origin)) {
         const envUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL;
         if (envUrl) return envUrl.replace(/\/$/, "");

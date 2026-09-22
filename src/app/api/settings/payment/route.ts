@@ -5,9 +5,9 @@ import { getAuthenticatedUser } from "@/lib/api-auth";
 // ============================================================
 // PAYMENT GATEWAY SETTINGS (KlikQRIS) — SUPERADMIN ONLY
 // ------------------------------------------------------------
-// API key & merchant id pembayaran HANYA bisa dilihat/diatur oleh
-// SUPERADMIN (admin dev). API key tidak pernah dikembalikan utuh
-// (di-mask) supaya tidak bocor.
+// Payment API key and merchant ID can ONLY be viewed/managed by
+// SUPERADMIN (development admin). The API key is never returned in full
+// (it is masked) to prevent leaks.
 // ============================================================
 
 function mask(value: string | null | undefined): string | null {
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     if (klikqrisBaseUrl !== undefined) patch.klikqrisBaseUrl = String(klikqrisBaseUrl).trim();
     if (klikqrisMerchantId !== undefined) patch.klikqrisMerchantId = String(klikqrisMerchantId).trim();
     if (klikqrisEnabled !== undefined) patch.klikqrisEnabled = Boolean(klikqrisEnabled);
-    // API key hanya di-update kalau dikirim & tidak kosong (biar tidak terhapus
-    // saat admin cuma ubah field lain). Kirim string kosong eksplisit "" untuk hapus.
+    // Update the API key only when provided and non-empty so it is not erased
+    // when an admin changes another field. Send an explicit empty string "" to delete it.
     if (typeof klikqrisApiKey === "string" && klikqrisApiKey.trim() !== "") {
         patch.klikqrisApiKey = klikqrisApiKey.trim();
     } else if (klikqrisApiKey === null) {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
         status: true,
-        message: "Pengaturan pembayaran disimpan",
+        message: "Payment settings saved",
         data: {
             klikqrisBaseUrl: cfg.klikqrisBaseUrl,
             klikqrisMerchantId: cfg.klikqrisMerchantId,

@@ -10,10 +10,10 @@ const registerSchema = z.object({
 });
 
 // Rate limit registrasi berbasis IP (anti-spam pembuatan akun massal).
-// In-memory: reset saat restart, cukup untuk mencegah abuse otomatis.
+// In-memory: resets on restart and is sufficient to prevent automated abuse.
 const regAttempts = new Map<string, number[]>();
 const REG_WINDOW_MS = 60 * 60 * 1000; // 1 jam
-const REG_MAX = 5; // maks 5 percobaan daftar per IP per jam
+const REG_MAX = 5; // maximum 5 registration attempts per IP per hour
 
 function getClientIp(req: Request): string {
     const xff = req.headers.get("x-forwarded-for");
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         const ip = getClientIp(req);
         if (isRateLimited(ip)) {
             return NextResponse.json(
-                { error: "Terlalu banyak percobaan registrasi. Coba lagi dalam 1 jam." },
+                { error: "Too many registration attempts. Try again in 1 hour." },
                 { status: 429 }
             );
         }
@@ -76,8 +76,8 @@ export async function POST(req: Request) {
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Role: user PERTAMA yang daftar otomatis jadi SUPERADMIN (admin dev),
-        // user berikutnya jadi STAFF (akses paling dasar; bisa di-upgrade admin).
+        // Role: the FIRST registered user automatically becomes SUPERADMIN (development admin),
+        // Subsequent users become STAFF (the most basic access; an admin can upgrade them).
         const userCount = await prisma.user.count();
         const role = userCount === 0 ? "SUPERADMIN" : "STAFF";
 

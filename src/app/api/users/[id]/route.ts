@@ -31,7 +31,7 @@ export async function PATCH(
             updateData.password = await bcrypt.hash(password, 10);
         }
 
-        // Ubah plan user (oleh SUPERADMIN)
+        // Change the user's plan (by SUPERADMIN)
         if (plan !== undefined) {
             const planId = String(plan).toUpperCase() as PlanId;
             if (!VALID_PLANS.includes(planId)) {
@@ -39,10 +39,10 @@ export async function PATCH(
             }
             updateData.plan = planId;
             if (planId === "FREE") {
-                // FREE tidak punya masa aktif
+                // FREE has no active period
                 updateData.planExpiresAt = null;
             } else {
-                // Hitung masa aktif: pakai planDurationDays kalau dikirim, kalau tidak pakai default plan.
+                // Calculate the active period: use planDurationDays when provided, otherwise the plan default.
                 // planDurationDays = 0 atau null -> tanpa kedaluwarsa (lifetime).
                 const cfg = getPlanConfig(planId);
                 const days = planDurationDays === undefined ? cfg.durationDays : Number(planDurationDays);

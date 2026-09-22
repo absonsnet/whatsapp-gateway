@@ -32,7 +32,7 @@ export function startAutoBroadcast() {
             const now = new Date();
 
             // Find all active auto broadcasts
-            // Scan ringan: jangan load mediaUrl (bisa besar/data URI) tiap menit.
+                // Lightweight scan: do not load mediaUrl (it may be a large data URI) every minute.
             const broadcasts = await prisma.autoBroadcast.findMany({
                 where: { isActive: true },
                 select: {
@@ -47,7 +47,7 @@ export function startAutoBroadcast() {
                 // Skip if session is not connected
                 if (b.session.status !== "CONNECTED") continue;
 
-                // Plan gating: skip kalau plan pemilik tidak mengizinkan auto-broadcast.
+                // Plan gating: skip if the owner's plan does not allow auto-broadcast.
                 if (!(await userPlanAllows(b.session.userId, "autoBroadcast"))) continue;
 
                 // Skip if this broadcast is already being sent
@@ -68,7 +68,7 @@ export function startAutoBroadcast() {
                     data: { lastSentAt: now }
                 });
 
-                // Load full broadcast (termasuk mediaUrl) HANYA saat benar-benar mengirim.
+                // Load the full broadcast (including mediaUrl) ONLY when actually sending.
                 const full = await prisma.autoBroadcast.findUnique({
                     where: { id: b.id },
                     include: { session: { select: { sessionId: true } } }
@@ -86,7 +86,7 @@ export function startAutoBroadcast() {
         } catch (error: any) {
             const code = error?.code;
             if (["P1001", "P1002", "P1008", "P1017"].includes(code)) {
-                logger.warn("AutoBroadcast", `Database belum siap (${code}) — skip siklus ini.`);
+                logger.warn("AutoBroadcast", `Database is not ready (${code}) — skipping this cycle.`);
             } else {
                 logger.error("AutoBroadcast", "Error in auto broadcast loop:", error);
             }
@@ -133,7 +133,7 @@ async function sendBroadcast(broadcast: any) {
                     const mediaContent: any = {};
                     let mediaSource: any;
 
-                    // Tentukan sumber media: data URI (DB) / file lokal (legacy) / URL eksternal.
+                    // Determine the media source: data URI (database), local file (legacy), or external URL.
                     if (broadcast.mediaUrl.startsWith("data:")) {
                         const base64 = broadcast.mediaUrl.split(",")[1] || "";
                         mediaSource = Buffer.from(base64, "base64");
@@ -160,8 +160,8 @@ async function sendBroadcast(broadcast: any) {
                         if (fs.existsSync(filePath)) {
                             mediaSource = fs.readFileSync(filePath);
                         } else {
-                            logger.warn("AutoBroadcast", `Media hilang di disk (${filename}) — kemungkinan filesystem ephemeral (Railway tanpa volume). Kirim teks saja. Pasang volume persisten di /app/data untuk memperbaiki.`);
-                            // Skip media — send as text only
+                            logger.warn("AutoBroadcast", `Media is missing from disk (${filename}) — the filesystem may be ephemeral (Railway without a volume). Sending text only. Mount persistent storage at /app/data to fix this.`);
+                            // Skip media and send text only.
                             await instance.socket.sendMessage(jid, { text: broadcast.message });
                             sentCount++;
                             await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));

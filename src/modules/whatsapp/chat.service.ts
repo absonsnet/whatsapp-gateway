@@ -232,10 +232,10 @@ export class ChatService {
         if (!instance || !instance.socket) {
             throw new Error("WhatsApp session is disconnected or not found");
         }
-        // Socket bisa ada tapi koneksi sedang reconnect/putus → kirim bisa gagal diam-diam.
-        // Wajib status CONNECTED supaya pesan benar-benar terkirim (anti "kadang ga ngirim").
+        // The socket can exist while reconnecting or disconnected, causing silent send failures.
+        // Require CONNECTED status so messages are actually delivered.
         if (instance.status !== "CONNECTED") {
-            throw new Error(`WhatsApp session belum CONNECTED (status: ${instance.status}). Coba lagi sebentar.`);
+            throw new Error(`WhatsApp session is not CONNECTED (status: ${instance.status}). Try again shortly.`);
         }
 
         let msgPayload = { ...messagePayload };

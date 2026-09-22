@@ -1,15 +1,15 @@
 "use client";
 
 // ============================================================
-// AUTO UPDATE CHECK DIMATIKAN (manual update only)
+// AUTO UPDATE CHECK DISABLED (manual updates only)
 // ------------------------------------------------------------
-// Komponen ini dulu otomatis polling /api/system/check-updates
-// yang mengambil rilis dari repo lain (vinsaeroy/WA-AKG).
-// Supaya perubahan di repo lain tidak ikut masuk ke sini,
-// pengecekan otomatis dimatikan. Update dilakukan manual.
+// This component previously polled /api/system/check-updates automatically
+// for releases from another repository (vinsaeroy/WA-AKG).
+// Automatic checking is disabled so changes from that repository do not enter this one.
+// Updates are performed manually.
 // ============================================================
 
 export function UpdateChecker() {
-    // Sengaja tidak melakukan apa-apa: tidak ada polling ke upstream.
+    // Intentionally do nothing: there is no polling of the upstream repository.
     return null;
 }

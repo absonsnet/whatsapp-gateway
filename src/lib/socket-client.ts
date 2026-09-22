@@ -9,8 +9,8 @@ import { io, type Socket, type ManagerOptions, type SocketOptions } from "socket
  * - `transports: ["websocket"]` + `upgrade: false`: skip HTTP long-polling,
  *   which fails behind sticky-session-less proxies (Railway free tier, Cloudflare),
  *   causing repeated 400 "session id unknown" errors in network logs.
- * - `reconnectionAttempts: Infinity`: dashboard dibuka lama-lama; jangan menyerah
- *   reconnect (kalau menyerah, status WA berhenti update → user harus refresh).
+ * - `reconnectionAttempts: Infinity`: the dashboard may remain open for a long time;
+ *   never give up reconnecting (otherwise WA status stops updating and the user must refresh).
  */
 export function createAppSocket(
     extra: Partial<ManagerOptions & SocketOptions> = {}

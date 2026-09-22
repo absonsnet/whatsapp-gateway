@@ -125,7 +125,7 @@ export function SidebarNav() {
     // @ts-ignore
     const userRole = session?.user?.role;
 
-    // Kapabilitas plan user (untuk sembunyikan menu fitur yang tidak aktif di plannya).
+    // User plan capabilities (hide menus for features not active on the plan).
     const [caps, setCaps] = useState<Record<string, boolean> | null>(null);
     useEffect(() => {
         let active = true;
@@ -159,7 +159,7 @@ export function SidebarNav() {
                     const visibleItems = group.items.filter((item) => {
                         if (item.superadminOnly && userRole !== "SUPERADMIN") return false;
                         if (item.allowedRoles && (!userRole || !item.allowedRoles.includes(userRole))) return false;
-                        // Sembunyikan fitur yang dimatikan di plan user (SUPERADMIN: /api/usage balikin semua true).
+                        // Hide features disabled on the user's plan (SUPERADMIN: /api/usage returns all true).
                         if (item.capability && caps && caps[item.capability] === false) return false;
                         return true;
                     });

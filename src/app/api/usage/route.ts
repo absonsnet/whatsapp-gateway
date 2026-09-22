@@ -12,7 +12,7 @@ function allCapsTrue(): Record<Capability, boolean> {
     return o;
 }
 
-// GET /api/usage — pemakaian API user saat ini + limit + kapabilitas plannya.
+// GET /api/usage — current user API usage, limits, and plan capabilities.
 export async function GET(request: NextRequest) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const plan = effectivePlan(user as any);
 
-    // SUPERADMIN: unlimited + semua kapabilitas aktif.
+    // SUPERADMIN: unlimited with all capabilities enabled.
     if ((user as any).role === "SUPERADMIN") {
         return NextResponse.json({
             status: true,

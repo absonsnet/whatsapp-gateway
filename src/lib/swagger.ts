@@ -33,10 +33,10 @@ All endpoints require authentication via:
             },
             servers: [
                 {
-                    // Relatif: "Try it out" otomatis pakai host+port halaman swagger
+                    // Relative: "Try it out" automatically uses the Swagger page host and port.
                     // (localhost:3030 saat dev, domain saat prod). Anti salah port.
                     url: "/api",
-                    description: "Current host (otomatis)",
+                    description: "Current host (automatic)",
                 },
                 {
                     url: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030/api",
@@ -5762,12 +5762,12 @@ All endpoints require authentication via:
     });
 
     // ============================================================
-    // POST-PROCESS — perbaiki endpoint yang "tidak aktif"
+    // POST-PROCESS — fix endpoints that are not active
     // ------------------------------------------------------------
-    // 1) Hapus path legacy yang TIDAK punya route nyata (single-param
-    //    /groups/{jid}/... dsb). Ini yang bikin 404 saat dicoba.
-    // 2) Tambahkan dokumentasi endpoint baru (billing, usage, jpm-swgc,
-    //    settings/payment) yang belum terdaftar.
+    // 1) Remove legacy paths without real routes (single-param
+    //    /groups/{jid}/... and similar). These cause 404 responses when tested.
+    // 2) Add new endpoint documentation (billing, usage, jpm-swgc,
+    //    settings/payment) that is not registered automatically.
     // ============================================================
     if (spec && spec.paths) {
         const deadPaths = [
@@ -5803,7 +5803,7 @@ All endpoints require authentication via:
                 get: {
                     tags: ["Billing"],
                     summary: "Get current API usage & plan limits",
-                    description: "Pemakaian API user (harian & bulanan) beserta limit plannya.",
+                    description: "User API usage (daily and monthly) with plan limits.",
                     responses: {
                         ...okJson("Usage data"),
                         401: { $ref: "#/components/responses/Unauthorized" }
@@ -5814,7 +5814,7 @@ All endpoints require authentication via:
                 get: {
                     tags: ["Billing"],
                     summary: "List available plans",
-                    description: "Daftar plan + harga + limit (publik).",
+                    description: "Public list of plans, prices, and limits.",
                     security: [],
                     responses: okJson("List of plans")
                 }
@@ -5823,7 +5823,7 @@ All endpoints require authentication via:
                 post: {
                     tags: ["Billing"],
                     summary: "Create QRIS payment for a plan",
-                    description: "Membuat transaksi QRIS (KlikQRIS) untuk upgrade plan.",
+                    description: "Create a QRIS (KlikQRIS) transaction to upgrade a plan.",
                     requestBody: {
                         required: true,
                         content: {
@@ -5862,7 +5862,7 @@ All endpoints require authentication via:
                 post: {
                     tags: ["Billing"],
                     summary: "KlikQRIS webhook (server-to-server)",
-                    description: "Endpoint callback untuk KlikQRIS. Dipanggil oleh gateway, bukan user.",
+                    description: "KlikQRIS callback endpoint. Called by the gateway, not by users.",
                     security: [],
                     responses: okJson("Acknowledged")
                 }
@@ -5887,7 +5887,7 @@ All endpoints require authentication via:
                                     properties: {
                                         klikqrisBaseUrl: { type: "string", example: "https://klikqris.com/api" },
                                         klikqrisMerchantId: { type: "string" },
-                                        klikqrisApiKey: { type: "string", description: "Kosongkan kalau tidak ingin mengubah" },
+                                        klikqrisApiKey: { type: "string", description: "Leave empty if you do not want to change it" },
                                         klikqrisEnabled: { type: "boolean" }
                                     }
                                 }

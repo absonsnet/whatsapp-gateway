@@ -40,15 +40,15 @@ export function setSessionStartTime(sessionId: string) {
     }
 }
 
-// ===== Helper untuk command grup =====
+// ===== Helpers for group commands =====
 function isGroupJid(jid: string) {
     return jid.endsWith("@g.us");
 }
 
 /**
- * Bungkus socket supaya semua sendMessage dari command interaktif pakai
- * skipQueue:true → kirim instan tanpa delay anti-ban "mengetik" (yang bikin
- * respon command terasa lemot). Method lain (groupMetadata, dll) diteruskan apa adanya.
+ * Wrap the socket so all sendMessage calls from interactive commands use
+ * skipQueue:true and send instantly without the anti-ban typing delay, which makes
+ * command responses feel slow. Other methods (groupMetadata, etc.) pass through unchanged.
  */
 function makeFastSock(sock: WASocket): WASocket {
     return new Proxy(sock, {
@@ -63,8 +63,8 @@ function makeFastSock(sock: WASocket): WASocket {
     }) as WASocket;
 }
 
-// Cache metadata grup singkat supaya command grup tidak fetch ulang tiap kali
-// (mengurangi latensi & rate-limit). TTL pendek karena admin/anggota bisa berubah.
+// Briefly cache group metadata so group commands do not fetch it every time
+// (reduces latency and rate limits). Short TTL because admins/members can change.
 const groupMetaCache = new Map<string, { meta: any; at: number }>();
 const GROUP_META_TTL = 15_000;
 
@@ -87,8 +87,8 @@ function safeSameUser(a?: string, b?: string): boolean {
 
 /**
  * Cek apakah salah satu identitas kandidat (nomor/LID) cocok dengan peserta
- * yang berstatus admin. WhatsApp baru memakai LID (@lid) untuk id peserta,
- * jadi bot/sender harus dicocokkan terhadap id, jid, lid, dan phoneNumber.
+ * that have admin status. Newer WhatsApp versions use LID (@lid) for participant IDs,
+ * so bot/sender identity must be matched against id, jid, lid, and phoneNumber.
  */
 function matchesAdmin(participants: any[], candidates: (string | null | undefined)[]): boolean {
     const cands = candidates.filter(Boolean) as string[];
@@ -102,8 +102,8 @@ function matchesAdmin(participants: any[], candidates: (string | null | undefine
 }
 
 /**
- * Pastikan: di grup, pengirim admin (atau owner/fromMe), dan bot adalah admin.
- * Mengembalikan metadata kalau lolos, atau pesan error.
+ * Requirements: in groups, the sender must be an admin (or owner/fromMe), and the bot must be an admin.
+ * Returns metadata when valid, or an error message.
  */
 async function requireGroupAdmin(
     sock: WASocket,
@@ -122,11 +122,11 @@ async function requireGroupAdmin(
 
     const participants = metadata.participants || [];
 
-    // Bot bisa diidentifikasi lewat nomor (id) ATAU LID — cek keduanya.
+    // The bot can be identified by number (id) OR LID; check both.
     const botCandidates = [sock.user?.id, (sock.user as any)?.lid];
     const botIsAdmin = matchesAdmin(participants, botCandidates);
 
-    // Sender juga bisa datang sebagai nomor atau LID tergantung versi/grup.
+    // The sender can also be a number or LID depending on the version/group.
     const k: any = msg.key;
     const ctx: any = msg.message?.extendedTextMessage?.contextInfo;
     const senderCandidates = [
@@ -161,7 +161,7 @@ export async function handleBotCommand(
 ) {
     if (!sock || !msg.message || !msg.key.remoteJid) return;
 
-    // Semua balasan command lewat fast-send (tanpa delay anti-ban) → responsif.
+    // All command replies use fast-send (without the anti-ban delay) for responsiveness.
     sock = makeFastSock(sock);
 
     const remoteJid = msg.key.remoteJid;
@@ -654,7 +654,7 @@ export async function handleBotCommand(
                 break;
             }
 
-            // ===== GROUP: OPEN / CLOSE (siapa yang bisa kirim pesan) =====
+            // ===== GROUP: OPEN / CLOSE (who can send messages) =====
             case "open":
             case "close":
             case "mute":

@@ -24,10 +24,10 @@ const nextConfig: NextConfig = {
    * Auth is still enforced inside each route via getAuthenticatedUser().
    */
   async headers() {
-    // Origin yang diizinkan untuk CORS /api/*.
-    // Default "*" (tidak mengubah perilaku lama). Untuk memperketat, set env
-    // CORS_ALLOW_ORIGIN=https://domainmu.com lalu restart. Catatan: panggilan
-    // server-to-server pakai X-API-Key TIDAK terpengaruh CORS (tidak ada Origin).
+    // Origin allowed for CORS /api/*.
+    // Default "*" (preserves existing behavior). To restrict it, set
+    // CORS_ALLOW_ORIGIN=https://your-domain.com and restart. Note: server-to-server
+    // calls using X-API-Key are NOT affected by CORS (they have no Origin).
     const allowOrigin = process.env.CORS_ALLOW_ORIGIN || "*";
     return [
       {

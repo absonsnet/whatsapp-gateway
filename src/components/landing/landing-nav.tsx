@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 
 export function LandingNav({ initialAppName = "WA-AKG" }: { initialAppName?: string }) {
     const [open, setOpen] = useState(false);
-    // null = belum tahu, true/false = status login. Pakai endpoint next-auth
-    // (/api/auth/session) supaya tidak perlu SessionProvider di halaman publik.
+    // null = unknown, true/false = login status. Use the next-auth endpoint
+    // (/api/auth/session) so the public page does not need SessionProvider.
     const [authed, setAuthed] = useState<boolean | null>(null);
     const [appName, setAppName] = useState(initialAppName);
 

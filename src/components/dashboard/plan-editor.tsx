@@ -1,7 +1,7 @@
 "use client";
 
-// Editor plan & pricing untuk SUPERADMIN. Mengubah harga, limit, dan benefit
-// yang ditampilkan di halaman pricing + dipakai untuk pembatasan kuota API.
+// Plan and pricing editor for SUPERADMIN. Changes prices, limits, and benefits
+// shown on the pricing page and used for API quota enforcement.
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -3,19 +3,19 @@ import { getPlanConfig } from "./plans";
 import { logger } from "./logger";
 
 /**
- * Tandai sebuah Payment sebagai PAID lalu aktifkan plan user.
- * Idempotent: kalau payment sudah PAID, tidak melakukan apa-apa.
+ * Mark a Payment as PAID and activate the user's plan.
+ * Idempotent: do nothing if the payment is already PAID.
  *
- * Perpanjangan masa aktif:
- * - kalau plan user masih aktif (planExpiresAt > now), durasi ditambahkan
- *   ke sisa masa aktif (extend).
- * - kalau sudah lewat / belum punya, dihitung dari sekarang.
+ * Active-period extension:
+ * - if the user's plan is still active (planExpiresAt > now), add duration
+ *   to the remaining active period (extend).
+ * - if it has expired or does not exist, calculate from now.
  */
 export async function markPaymentPaidAndActivate(paymentId: string): Promise<boolean> {
     return prisma.$transaction(async (tx) => {
         const payment = await tx.payment.findUnique({ where: { id: paymentId } });
         if (!payment) {
-            logger.warn("Billing", `Payment ${paymentId} tidak ditemukan`);
+            logger.warn("Billing", `Payment ${paymentId} not found`);
             return false;
         }
         if (payment.status === "PAID") {
@@ -34,7 +34,7 @@ export async function markPaymentPaidAndActivate(paymentId: string): Promise<boo
             user?.planExpiresAt &&
             new Date(user.planExpiresAt).getTime() > now.getTime()
         ) {
-            base = new Date(user.planExpiresAt); // extend dari sisa masa aktif
+            base = new Date(user.planExpiresAt); // extend from the remaining active period
         }
 
         const newExpiry = new Date(base.getTime() + durationDays * 24 * 60 * 60 * 1000);
@@ -49,18 +49,18 @@ export async function markPaymentPaidAndActivate(paymentId: string): Promise<boo
             data: { plan: payment.plan, planExpiresAt: newExpiry }
         });
 
-        // Notifikasi in-app
+        // In-app notification
         await tx.notification.create({
             data: {
                 userId: payment.userId,
-                title: `Plan ${cfg.name} aktif 🎉`,
-                message: `Pembayaran berhasil. Plan ${cfg.name} aktif sampai ${newExpiry.toLocaleString("id-ID")}.`,
+                title: `Plan ${cfg.name} activated 🎉`,
+                message: `Payment successful. Plan ${cfg.name} is active until ${newExpiry.toLocaleString("id-ID")}.`,
                 type: "SUCCESS",
                 href: "/dashboard/billing"
             }
         }).catch(() => {});
 
-        logger.success("Billing", `Plan ${payment.plan} aktif untuk user ${payment.userId} s/d ${newExpiry.toISOString()}`);
+        logger.success("Billing", `Plan ${payment.plan} activated for user ${payment.userId} until ${newExpiry.toISOString()}`);
         return true;
     });
 }

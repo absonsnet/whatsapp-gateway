@@ -5,12 +5,12 @@ import { markPaymentPaidAndActivate } from "@/lib/billing";
 import { logger } from "@/lib/logger";
 
 // POST /api/billing/callback
-// Webhook dari KlikQRIS. Daftarkan URL ini di dashboard KlikQRIS:
+// Webhook from KlikQRIS. Register this URL in the KlikQRIS dashboard:
 //   https://rifalos.shop/api/billing/callback
 //
-// Validasi sesuai dok: bandingkan `signature` di payload callback dengan
-// `signature` yang disimpan saat create transaksi (Payment.signature).
-// Wajib balas HTTP 200 OK supaya gateway tidak retry terus.
+// Validate according to the documentation: compare the `signature` in the callback
+// payload with the `signature` stored when the transaction was created (Payment.signature).
+// Always return HTTP 200 OK so the gateway does not retry indefinitely.
 export async function POST(request: NextRequest) {
     const rawBody = await request.text();
 
@@ -26,26 +26,26 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ status: false, message: "Missing order_id" }, { status: 400 });
     }
 
-    // order_id yang kita kirim = Payment.id; reference juga diisi order_id
+    // The order_id we send is Payment.id; reference is also set to order_id.
     const payment = await prisma.payment.findFirst({
         where: { OR: [{ id: orderId }, { reference: orderId }] }
     });
 
     if (!payment) {
-        logger.warn("Billing", `Callback untuk order_id tidak dikenal: ${orderId}`);
-        // balas 200 biar gateway berhenti retry untuk data sampah
+        logger.warn("Billing", `Callback for unknown order_id: ${orderId}`);
+        // Return 200 so the gateway stops retrying invalid data.
         return NextResponse.json({ status: true, message: "Ignored (unknown order)" });
     }
 
-    // Validasi signature terhadap signature yang disimpan saat create
+    // Validate the signature against the value stored during creation.
     if (!verifyCallbackSignature(signature, payment.signature)) {
-        logger.warn("Billing", `Signature callback tidak cocok untuk ${orderId} — ditolak`);
+        logger.warn("Billing", `Callback signature mismatch for ${orderId} — rejected`);
         return NextResponse.json({ status: false, message: "Invalid signature" }, { status: 401 });
     }
 
     try {
         if (status === "PAID") {
-            // Idempotent: markPaymentPaidAndActivate skip kalau sudah PAID
+            // Idempotent: markPaymentPaidAndActivate skips an already-PAID payment.
             await markPaymentPaidAndActivate(payment.id);
         } else if (status === "EXPIRED" || status === "FAILED" || status === "CANCELLED") {
             if (payment.status !== "PAID") {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
             }
         }
     } catch (e) {
-        logger.error("Billing", "Gagal memproses callback:", e);
+        logger.error("Billing", "Failed to process callback:", e);
         return NextResponse.json({ status: false, message: "Processing error" }, { status: 500 });
     }
 

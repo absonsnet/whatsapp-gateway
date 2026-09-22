@@ -23,8 +23,8 @@ export async function validateApiKey(request: NextRequest) {
         return null;
     }
 
-    // Key baru disimpan ter-hash (sha256). Cari berdasarkan hash DULU, lalu
-    // fallback ke plaintext untuk key lama (legacy) yang belum dimigrasi —
+    // New keys are stored as hashes (sha256). Search by hash FIRST, then
+    // fall back to plaintext for legacy keys that have not been migrated —
     // jadi key lama tetap berfungsi sampai user generate ulang.
     const hashed = hashApiKey(apiKey);
 
@@ -36,8 +36,8 @@ export async function validateApiKey(request: NextRequest) {
 
         return user;
     } catch {
-        // Fallback: kalau kolom plan/planExpiresAt belum ada di DB (belum `db push`),
-        // jangan bikin auth gagal total — anggap FREE dulu.
+        // Fallback: if the plan/planExpiresAt columns are not in the database yet
+        // (db push has not run), do not fail authentication; assume FREE.
         try {
             const user = await prisma.user.findFirst({
                 where: { OR: [{ apiKey: hashed }, { apiKey }] },
@@ -74,7 +74,7 @@ export async function getAuthenticatedUser(request?: NextRequest) {
                 select: { id: true, email: true, name: true, role: true, plan: true, planExpiresAt: true }
             });
         } catch {
-            // Fallback kalau kolom plan belum ada di DB (belum `db push`)
+            // Fallback if the plan column is not in the database yet (db push has not run).
             try {
                 const base = await prisma.user.findUnique({
                     where: { id: session.user.id },
@@ -267,15 +267,15 @@ export function generateApiKey(): string {
 }
 
 /**
- * Hash sebuah API key (sha256) untuk disimpan di DB.
- * Key plaintext hanya ditampilkan sekali ke user saat generate; DB hanya menyimpan hash.
+ * Hash an API key (sha256) for storage in the database.
+ * The plaintext key is shown to the user only once during generation; the database stores only the hash.
  */
 export function hashApiKey(key: string): string {
     return crypto.createHash("sha256").update(key).digest("hex");
 }
 
 /**
- * Deteksi apakah nilai tersimpan sudah berupa hash (64 hex) atau masih plaintext legacy.
+ * Detect whether the stored value is already a hash (64 hex) or legacy plaintext.
  */
 export function isHashedApiKey(value: string | null | undefined): boolean {
     return !!value && /^[a-f0-9]{64}$/.test(value);

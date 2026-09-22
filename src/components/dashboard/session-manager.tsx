@@ -55,7 +55,7 @@ export function SessionManager({ user }: { user: any }) {
 
         setSocket(socketInstance);
 
-        // Polling fallback (background, tanpa reload halaman): kalau socket
+        // Polling fallback (background, without reloading): if the socket
         // sempat putus / ada event yang terlewat, status tetap ter-update.
         const pollInterval = setInterval(() => {
             if (document.visibilityState === "visible") fetchSessions();
@@ -67,13 +67,13 @@ export function SessionManager({ user }: { user: any }) {
         };
     }, []);
 
-    // Gabung ke room tiap session supaya update status real-time diterima
+    // Join each session room so real-time status updates are received.
     // (server emit ke room `sessionId`). Tanpa ini, status baru update saat refresh.
     useEffect(() => {
         if (!socket) return;
         const join = () => sessions.forEach(s => socket.emit("join-session", s.sessionId));
         join();
-        socket.on("connect", join); // join ulang kalau socket reconnect
+        socket.on("connect", join); // rejoin when the socket reconnects
         return () => {
             socket.off("connect", join);
         };

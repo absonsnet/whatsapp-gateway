@@ -6,7 +6,7 @@ import { getMergedPlan } from "./plans-store";
 import { logger } from "./logger";
 
 /**
- * Tanggal hari & bulan dalam timezone Asia/Jakarta.
+ * Day and month dates in the Asia/Jakarta timezone.
  * en-CA menghasilkan format YYYY-MM-DD.
  */
 function jakartaParts(d = new Date()): { day: string; month: string } {
@@ -35,7 +35,7 @@ function remaining(limit: number, used: number): number {
 }
 
 /**
- * Baca pemakaian saat ini (tanpa menambah counter).
+ * Read current usage (without incrementing the counter).
  */
 export async function getUsage(userId: string, plan: PlanId): Promise<UsageInfo> {
     const { day, month } = jakartaParts();
@@ -67,8 +67,8 @@ export interface ConsumeResult {
 }
 
 /**
- * Cek limit lalu tambah counter 1 kalau masih boleh.
- * (ada sedikit race antara cek & increment, cukup untuk use-case ini)
+ * Check the limit, then increment the counter by 1 if allowed.
+ * (There is a small race between check and increment, acceptable for this use case.)
  */
 export async function consumeQuota(userId: string, plan: PlanId): Promise<ConsumeResult> {
     const { day, month } = jakartaParts();
@@ -104,13 +104,13 @@ type EnforceResult =
     | { error: NextResponse; user?: undefined; usage?: undefined };
 
 /**
- * Helper utama untuk dipakai di API route:
+ * Main helper for use in API routes:
  *   const gate = await enforceApiQuota(request);
  *   if (gate.error) return gate.error;
  *   const { user } = gate;
  *
  * Melakukan: autentikasi → cek plan efektif → konsumsi 1 quota.
- * Balikin 401 kalau tak terotentikasi, 429 kalau limit habis.
+ * Returns 401 when unauthenticated and 429 when the limit is exhausted.
  */
 export async function enforceApiQuota(request: NextRequest, capability?: Capability): Promise<EnforceResult> {
     const user = await getAuthenticatedUser(request);
@@ -123,7 +123,7 @@ export async function enforceApiQuota(request: NextRequest, capability?: Capabil
         };
     }
 
-    // SUPERADMIN: plan unlimited — lewati kuota & gating kapabilitas sepenuhnya
+    // SUPERADMIN: unlimited plan — bypass quota and capability gating entirely.
     if ((user as any).role === "SUPERADMIN") {
         return {
             user,
@@ -141,7 +141,7 @@ export async function enforceApiQuota(request: NextRequest, capability?: Capabil
 
     const plan = effectivePlan(user as any);
 
-    // Gating kapabilitas: tolak kalau fitur dimatikan di plan user.
+    // Capability gating: reject when the feature is disabled on the user's plan.
     if (capability) {
         const cfg = await getMergedPlan(plan);
         if (!planAllows(cfg, capability)) {
@@ -149,7 +149,7 @@ export async function enforceApiQuota(request: NextRequest, capability?: Capabil
                 error: NextResponse.json(
                     {
                         status: false,
-                        message: `Fitur ini tidak tersedia di plan ${plan}. Upgrade plan untuk mengaksesnya.`,
+                        message: `This feature is not available on the ${plan} plan. Upgrade your plan to access it.`,
                         error: "feature_not_in_plan",
                         data: { plan, capability }
                     },
@@ -162,12 +162,12 @@ export async function enforceApiQuota(request: NextRequest, capability?: Capabil
     try {
         const result = await consumeQuota(user.id, plan);
         if (!result.allowed) {
-            const scopeLabel = result.scope === "day" ? "harian" : "bulanan";
+            const scopeLabel = result.scope === "day" ? "daily" : "monthly";
             return {
                 error: NextResponse.json(
                     {
                         status: false,
-                        message: `Limit ${scopeLabel} plan ${plan} sudah habis. Upgrade plan untuk kuota lebih besar.`,
+                        message: `${scopeLabel} limit for the ${plan} plan has been reached. Upgrade your plan for more quota.`,
                         error: "rate_limited",
                         data: {
                             plan,
@@ -189,9 +189,9 @@ export async function enforceApiQuota(request: NextRequest, capability?: Capabil
         }
         return { user, usage: result.usage };
     } catch (e) {
-        // Kalau pencatatan usage gagal, jangan blokir request (fail-open),
+        // If usage recording fails, do not block the request (fail open),
         // tapi tetap log biar ketahuan.
-        logger.error("RateLimit", "Gagal konsumsi quota:", e);
+        logger.error("RateLimit", "Failed to consume quota:", e);
         return { user, usage: await getUsage(user.id, plan).catch(() => ({
             plan,
             dayCount: 0,
@@ -207,7 +207,7 @@ export async function enforceApiQuota(request: NextRequest, capability?: Capabil
 
 /**
  * Cek auth + kapabilitas plan TANPA mengonsumsi kuota.
- * Untuk endpoint konfigurasi (buat webhook, scheduler, auto-reply, dll):
+ * For configuration endpoints (webhooks, scheduler, auto-reply, etc.):
  *   const gate = await enforceCapability(request, "webhook");
  *   if (gate.error) return gate.error;
  *   const { user } = gate;
@@ -237,7 +237,7 @@ export async function enforceCapability(
             error: NextResponse.json(
                 {
                     status: false,
-                    message: `Fitur ini tidak tersedia di plan ${plan}. Upgrade plan untuk mengaksesnya.`,
+                    message: `This feature is not available on the ${plan} plan. Upgrade your plan to access it.`,
                     error: "feature_not_in_plan",
                     data: { plan, capability }
                 },

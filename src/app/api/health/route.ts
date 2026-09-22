@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-// Health check ringan untuk Railway/Render: TIDAK menyentuh DB/filesystem,
+// Lightweight health check for Railway/Render: does NOT touch the database/filesystem,
 // jadi cepat & selalu 200 selama proses hidup. Mencegah restart loop akibat
 // health check ke "/" yang lambat (baca docs + query DB).
 export const dynamic = "force-dynamic";

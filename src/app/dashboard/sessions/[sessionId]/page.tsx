@@ -123,7 +123,7 @@ export default function SessionDetailPage() {
         fetchMetrics();
         const metricsInterval = setInterval(fetchMetrics, 3000);
 
-        // Polling status di background (tanpa reload) — fallback kalau socket
+        // Poll status in the background (without reloading) as a socket fallback.
         // melewatkan event connection.update.
         const statusInterval = setInterval(() => {
             if (document.visibilityState === "visible") fetchSession();

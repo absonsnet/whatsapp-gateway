@@ -1,9 +1,9 @@
-// Next.js instrumentation — menangkap SEMUA error sisi server (termasuk error
+// Next.js instrumentation — captures ALL server-side errors (including errors
 // render Server Component yang pesannya disembunyikan di production) dan
 // mencatatnya lengkap ke log server (Render), beserta `digest` yang sama dengan
 // `ref:` di halaman error. Ini bikin akar masalah bisa ditelusuri.
 //
-// Cara pakai: saat error muncul, lihat `ref: <digest>` di halaman, lalu cari
+// Usage: when an error appears, find `ref: <digest>` on the page, then search
 // baris "[onRequestError] digest=<digest>" di Render Logs → di situ pesan aslinya.
 
 export async function onRequestError(

@@ -4,20 +4,20 @@ import { logger } from "@/lib/logger";
 import crypto from "crypto";
 
 // ============================================================
-// ENKRIPSI AT-REST untuk kredensial Baileys (AuthState).
+// AT-REST ENCRYPTION for Baileys credentials (AuthState).
 // ------------------------------------------------------------
-// Kredensial sesi WhatsApp = kunci untuk "menjadi" akun WA itu. Kalau DB bocor
-// dan creds disimpan plaintext, penyerang bisa membajak sesi WhatsApp.
-// Maka kita enkripsi (AES-256-GCM) pakai kunci turunan AUTH_SECRET.
+// WhatsApp session credentials are the keys to the WA account. If the database
+// leaks and credentials are stored as plaintext, an attacker can hijack the session.
+// Therefore, encrypt them (AES-256-GCM) with a key derived from AUTH_SECRET.
 //
 // Backward compatible:
-//  - WRITE: selalu terenkripsi (kalau AUTH_SECRET ada).
-//  - READ : kalau data ber-tanda __enc → decrypt; kalau tidak → plaintext lama.
-//  Jadi sesi yang sudah ada TIDAK perlu scan ulang; otomatis ter-enkripsi saat
-//  creds.update berikutnya.
+//  - WRITE: always encrypted (when AUTH_SECRET is present).
+//  - READ: decrypt data marked with __enc; otherwise read legacy plaintext.
+//  Existing sessions do not need to be scanned again; they are encrypted
+//  automatically on the next creds.update.
 //
-// ⚠️ AUTH_SECRET harus STABIL. Kalau diganti, creds terenkripsi tak bisa dibaca
-//    (sesi perlu scan ulang) — sama seperti sesi NextAuth.
+// AUTH_SECRET must remain STABLE. If changed, encrypted credentials cannot be read
+// (the session must be scanned again), just like a NextAuth session.
 // ============================================================
 function encKey(): Buffer | null {
     const s = process.env.AUTH_SECRET;
@@ -27,7 +27,7 @@ function encKey(): Buffer | null {
 
 function encryptValue(plaintext: string): Record<string, unknown> | null {
     const key = encKey();
-    if (!key) return null; // tanpa AUTH_SECRET → simpan plaintext (jangan kunci diri sendiri)
+    if (!key) return null; // without AUTH_SECRET -> store plaintext (do not lock yourself out)
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
     const ct = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
@@ -42,7 +42,7 @@ function encryptValue(plaintext: string): Record<string, unknown> | null {
 
 function decryptValue(obj: any): string {
     const key = encKey();
-    if (!key) throw new Error("AUTH_SECRET tidak diset, tidak bisa dekripsi auth state");
+    if (!key) throw new Error("AUTH_SECRET is not set; auth state cannot be decrypted");
     const iv = Buffer.from(obj.iv, "base64");
     const tag = Buffer.from(obj.tag, "base64");
     const ct = Buffer.from(obj.ct, "base64");
@@ -53,7 +53,7 @@ function decryptValue(obj: any): string {
 
 export const usePrismaAuthState = async (sessionId: string): Promise<{ state: AuthenticationState, saveCreds: () => Promise<void> }> => {
 
-    // Baca + (kalau perlu) dekripsi → kembalikan object BufferJSON-encoded.
+    // Read and decrypt when needed, then return the BufferJSON-encoded object.
     const readData = async (type: string, id: string) => {
         try {
             const key = `${type}-${id}`;
@@ -77,7 +77,7 @@ export const usePrismaAuthState = async (sessionId: string): Promise<{ state: Au
         }
     };
 
-    // Tulis terenkripsi (atau plaintext kalau AUTH_SECRET tidak ada).
+    // Write encrypted data (or plaintext when AUTH_SECRET is unavailable).
     const writeData = async (type: string, id: string, data: any) => {
         try {
             const key = `${type}-${id}`;

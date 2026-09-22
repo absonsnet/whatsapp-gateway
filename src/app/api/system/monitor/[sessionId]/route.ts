@@ -64,8 +64,8 @@ export async function GET(
 
         const uptime = instance.startTime ? Date.now() - instance.startTime.getTime() : 0;
 
-        // Sampai sini status pasti CONNECTED (sudah di-guard di atas), jadi ping = Online.
-        // (Cek socket.ws.readyState tidak reliable di Baileys 7.x → dulu selalu "Unknown".)
+        // At this point status is guaranteed to be CONNECTED (guarded above), so ping = Online.
+        // Checking socket.ws.readyState is unreliable in Baileys 7.x and previously always returned "Unknown".
         let pingStatus = "Online";
         try {
             const ws = instance.socket?.ws as any;

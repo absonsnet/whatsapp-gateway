@@ -4,8 +4,8 @@ import { getMergedPlans } from "@/lib/plans-store";
 
 export const dynamic = "force-dynamic";
 
-// Publik: daftar plan + harga + limit (sudah termasuk override SUPERADMIN dari DB).
-// Dipakai landing & halaman pricing.
+// Public: plans, prices, and limits (including SUPERADMIN database overrides).
+// Used by the landing and pricing pages.
 export async function GET() {
     const all = await getMergedPlans();
     const plans = PLAN_ORDER.map((id) => all[id]);

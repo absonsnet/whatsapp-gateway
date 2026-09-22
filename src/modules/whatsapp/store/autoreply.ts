@@ -87,7 +87,7 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
 
         if (!config || !config.enabled) return;
 
-        // Plan gating: kalau plan pemilik session tidak mengizinkan Auto Reply, jangan balas.
+        // Plan gating: do not reply if the session owner's plan does not allow Auto Reply.
         if (!(await userPlanAllows((session as any).userId, "autoReply"))) return;
 
         for (const msg of messages) {

@@ -9,8 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Save, CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-// Kartu pengaturan payment gateway KlikQRIS — HANYA dirender untuk SUPERADMIN.
-// API key disimpan di server (DB) & tidak pernah ditampilkan utuh.
+// KlikQRIS payment gateway settings card — rendered only for SUPERADMIN.
+// The API key is stored on the server (database) and never shown in full.
 export function PaymentSettingsCard() {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -19,7 +19,7 @@ export function PaymentSettingsCard() {
     const [form, setForm] = useState({
         klikqrisBaseUrl: "https://klikqris.com/api",
         klikqrisMerchantId: "",
-        klikqrisApiKey: "", // kosong = jangan ubah
+        klikqrisApiKey: "", // empty = do not change
         klikqrisEnabled: false
     });
 
@@ -54,7 +54,7 @@ export function PaymentSettingsCard() {
                 klikqrisMerchantId: form.klikqrisMerchantId,
                 klikqrisEnabled: form.klikqrisEnabled
             };
-            // hanya kirim apiKey kalau admin mengetik yang baru
+            // only send apiKey when the admin enters a new one
             if (form.klikqrisApiKey.trim() !== "") payload.klikqrisApiKey = form.klikqrisApiKey.trim();
 
             const res = await fetch("/api/settings/payment", {

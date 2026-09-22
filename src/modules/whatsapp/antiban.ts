@@ -4,15 +4,15 @@ import { logger } from "@/lib/logger";
 // ============================================================
 // ANTI-BAN HUMANIZER
 // ------------------------------------------------------------
-// WA makin ketat ke nomor yang ngirim "kayak bot" (instan, tanpa
-// presence, spam cepat). Modul ini bikin pola kirim lebih manusiawi:
+// WA is increasingly strict with numbers that send messages "like a bot"
+// (instant messages, no presence, rapid spam). This module makes sending patterns more human:
 //   1. Subscribe presence ke lawan chat
 //   2. Tampilkan status "mengetik"/"merekam" sebentar
-//   3. Kasih jeda acak (skala panjang teks) sebelum benar-benar kirim
-//   4. Set presence "paused" setelah kirim
+//   3. Add a random delay (scaled to text length) before sending
+//   4. Set presence "paused" after sending
 //
 // Dikontrol per-sesi lewat BotConfig (antiBanEnabled, dst).
-// Semua best-effort: kalau gagal, JANGAN blokir pengiriman pesan.
+// All best-effort: if anything fails, NEVER block message delivery.
 // ============================================================
 
 interface AntiBanConfig {
@@ -59,7 +59,7 @@ class AntiBanManager {
             });
 
             const row = session?.botConfig;
-            // Default: aktif walau botConfig belum ada (aman by default)
+            // Default: active even when botConfig is missing (safe by default).
             const config: AntiBanConfig = row
                 ? {
                       antiBanEnabled: row.antiBanEnabled ?? true,
@@ -79,17 +79,17 @@ class AntiBanManager {
             this.cache.set(sessionId, { config, at: Date.now() });
             return config;
         } catch (e) {
-            logger.debug("Anti-Ban", `Config fetch gagal untuk ${sessionId}`, e);
+            logger.debug("Anti-Ban", `Config fetch failed for ${sessionId}`, e);
             this.cache.set(sessionId, { config: null, at: Date.now() });
             return null;
         }
     }
 
-    /** Jenis konten yang TIDAK perlu dihumanize (presence/koreksi). */
+    /** Content types that do NOT need humanization (presence/corrections). */
     private shouldSkip(content: any): boolean {
         if (!content || typeof content !== "object") return true;
         if (content.react || content.delete || content.edit || content.protocolMessage) return true;
-        // presence / status update bukan kiriman pesan biasa
+        // Presence/status updates are not regular outgoing messages.
         if (content.disappearingMessagesInChat !== undefined) return true;
         return false;
     }
@@ -107,7 +107,7 @@ class AntiBanManager {
     }
 
     /**
-     * Jalankan humanizer sebelum pesan benar-benar dikirim.
+    * Run the humanizer before a message is actually sent.
      * @param sock socket Baileys
      * @param sessionId id sesi
      * @param jid tujuan
@@ -122,7 +122,7 @@ class AntiBanManager {
 
             const presence = this.presenceFor(content);
 
-            // Tandai dibaca dulu (opsional)
+            // Mark as read first (optional).
             if (config.antiBanReadFirst) {
                 await sock.sendPresenceUpdate("available", jid).catch(() => {});
             }
@@ -132,7 +132,7 @@ class AntiBanManager {
                 await sock.sendPresenceUpdate(presence, jid).catch(() => {});
             }
 
-            // Jeda manusiawi: base acak + tambahan kecil sesuai panjang teks
+            // Human-like delay: random base plus a small addition based on text length.
             const min = Math.max(0, config.antiBanMinDelay);
             const max = Math.max(min, config.antiBanMaxDelay);
             const base = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -145,7 +145,7 @@ class AntiBanManager {
                 await sock.sendPresenceUpdate("paused", jid).catch(() => {});
             }
         } catch (e) {
-            // best-effort — jangan pernah menggagalkan pengiriman
+            // Best effort — never fail message delivery.
             logger.debug("Anti-Ban", "humanize error (diabaikan):", e);
         }
     }

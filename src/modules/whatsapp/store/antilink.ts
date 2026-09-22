@@ -162,7 +162,7 @@ export function bindAntiLink(sock: WASocket, sessionId: string) {
                     // Still warn once so user knows
                     try {
                         await sock.sendMessage(remoteJid, {
-                            text: "⚠️ Anti-link aktif tapi bot bukan admin. Jadikan bot admin agar bisa hapus/kick.",
+                            text: "⚠️ Anti-link is active, but the bot is not an admin. Make the bot a group admin so it can delete/kick.",
                         });
                     } catch { /* ignore */ }
                     continue;
@@ -186,11 +186,11 @@ export function bindAntiLink(sock: WASocket, sessionId: string) {
                 // 2. Warn the sender (with mention)
                 const count = incWarn(sessionId, remoteJid, senderJid);
                 const phone = senderJid.split(/[:@]/)[0];
-                let warningText = `⚠️ @${phone} dilarang mengirim link di grup ini.`;
+                let warningText = `⚠️ @${phone} is not allowed to send links in this group.`;
                 if (action === "KICK") {
-                    warningText += `\nPeringatan ${count}/${limit}.`;
+                    warningText += `\nWarning ${count}/${limit}.`;
                     if (count >= limit) {
-                        warningText += ` Anda akan dikeluarkan dari grup.`;
+                        warningText += ` You will be removed from the group.`;
                     }
                 }
 

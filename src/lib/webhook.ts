@@ -29,9 +29,9 @@ interface WebhookPayload {
     data: any;
 }
 
-// Pelacak kegagalan beruntun per-webhook (in-memory, reset saat restart).
-// Webhook yang terus gagal (mis. URL 404) akan dinonaktifkan otomatis supaya
-// tidak menspam log pada tiap event WhatsApp.
+// In-memory consecutive-failure tracker per webhook (resets on restart).
+// A webhook that keeps failing (for example, URL 404) is disabled automatically so
+// so logs are not spammed for every WhatsApp event.
 const webhookFailures = new Map<string, number>();
 const MAX_WEBHOOK_FAILURES = 15;
 
@@ -52,24 +52,24 @@ async function handleWebhookFailure(
             });
             logger.warn(
                 "Webhook",
-                `Webhook ${webhook.id} (${webhook.url}) dinonaktifkan otomatis setelah ${MAX_WEBHOOK_FAILURES}x gagal. Terakhir: ${msg}. Perbaiki URL di Dashboard → Webhooks lalu aktifkan lagi.`
+                `Webhook ${webhook.id} (${webhook.url}) was automatically disabled after ${MAX_WEBHOOK_FAILURES} failures. Last error: ${msg}. Fix the URL in Dashboard → Webhooks and re-enable it.`
             );
         } catch (e) {
-            logger.error("Webhook", `Gagal menonaktifkan webhook ${webhook.id}:`, e);
+            logger.error("Webhook", `Failed to disable webhook ${webhook.id}:`, e);
         }
         return;
     }
 
-    // Kurangi spam: kegagalan pertama -> warn (sekali), berikutnya -> debug.
+    // Reduce noise: warn once on the first failure, then use debug logging.
     if (count === 1) {
         logger.warn(
             "Webhook",
-            `Webhook ${webhook.id} gagal: ${msg}. Cek URL tujuan di Dashboard → Webhooks.`
+            `Webhook ${webhook.id} failed: ${msg}. Check the destination URL in Dashboard → Webhooks.`
         );
     } else {
         logger.debug(
             "Webhook",
-            `Webhook ${webhook.id} gagal lagi (${count}/${MAX_WEBHOOK_FAILURES}): ${msg}`
+            `Webhook ${webhook.id} failed again (${count}/${MAX_WEBHOOK_FAILURES}): ${msg}`
         );
     }
 }
@@ -94,7 +94,7 @@ export async function dispatchWebhook(
             return;
         }
 
-        // Plan gating: kalau plan pemilik session tidak mengizinkan webhook, jangan kirim.
+        // Plan gating: do not send if the session owner's plan does not allow webhooks.
         if (!(await userPlanAllows(session.userId, "webhook"))) return;
 
         // Find all active webhooks for this user/session and anyone having shared access
@@ -136,7 +136,7 @@ export async function dispatchWebhook(
             // Send webhook in background
             sendWebhookRequest(webhook.url, payload, webhook.secret)
                 .then(() => {
-                    // Sukses → reset penghitung kegagalan.
+                    // Success -> reset the failure counter.
                     if (webhookFailures.has(webhook.id)) webhookFailures.delete(webhook.id);
                 })
                 .catch((err) => {

@@ -146,8 +146,8 @@ export async function DELETE(
                 console.log("Session logout error (might be already disconnected):", e);
             }
         }
-        // deleteSession sudah menutup socket + menghapus row DB (idempotent).
-        // Jangan delete lagi di sini (dulu bikin P2025 "record not found").
+        // deleteSession already closes the socket and deletes the database row (idempotent).
+        // Do not delete it again here (this previously caused P2025 "record not found").
         await waManager.deleteSession(sessionId);
 
         return NextResponse.json({ status: true, message: "Session deleted successfully" });

@@ -4,12 +4,12 @@ import { logger } from "./logger";
 // ============================================================
 // KLIKQRIS PAYMENT CLIENT
 // ------------------------------------------------------------
-// Sesuai dokumentasi resmi: https://klikqris.com/dokumentasi-api
+// According to the official documentation: https://klikqris.com/dokumentasi-api
 //
-// Kredensial diambil dari DB (SystemConfig) yang HANYA bisa diatur
-// SUPERADMIN. Kalau DB kosong, fallback ke ENV (kompatibilitas lama).
+// Credentials are read from the database (SystemConfig) and can only be managed
+// by SUPERADMIN. If the database is empty, fall back to ENV for compatibility.
 //
-// Header wajib di tiap request:
+// Required headers for every request:
 //   x-api-key:   <API_KEY>
 //   id_merchant: <MERCHANT_ID>
 //
@@ -28,7 +28,7 @@ interface KlikQrisConfig {
 }
 
 /**
- * Ambil konfigurasi KlikQRIS: utamakan DB (diatur admin), fallback ENV.
+ * Get KlikQRIS configuration: prefer the database (managed by admin), then ENV.
  */
 export async function getKlikQrisConfig(): Promise<KlikQrisConfig> {
     let baseUrl = process.env.KLIKQRIS_BASE_URL || "https://klikqris.com/api";
@@ -45,10 +45,10 @@ export async function getKlikQrisConfig(): Promise<KlikQrisConfig> {
             enabled = Boolean(cfg.klikqrisEnabled);
         }
     } catch (e) {
-        logger.warn("KlikQRIS", "Gagal baca config dari DB, pakai ENV:", e);
+        logger.warn("KlikQRIS", "Failed to read config from the database; using ENV:", e);
     }
 
-    // Kalau pakai ENV (tanpa DB), anggap aktif kalau key & merchant terisi
+    // When using ENV without a database config, consider it enabled when key and merchant are set.
     if (!enabled && apiKey && merchantId && !process.env.KLIKQRIS_FORCE_DB) {
         enabled = true;
     }
@@ -63,7 +63,7 @@ export async function isKlikQrisConfigured(): Promise<boolean> {
 
 export interface CreateQrisInput {
     amount: number; // IDR (nominal dasar / harga plan)
-    orderId: string; // id unik kita (Payment.id) -> dikirim sebagai order_id
+    orderId: string; // our unique ID (Payment.id) -> sent as order_id
     description?: string;
 }
 
@@ -71,7 +71,7 @@ export interface CreateQrisResult {
     reference: string; // order_id (echo)
     qrImageUrl: string | null; // qris_url atau data-uri qris_image
     totalAmount: number | null; // total_amount = nominal akhir yg ditagih
-    signature: string | null; // dipakai validasi webhook
+    signature: string | null; // used to validate the webhook
     expiresAt: Date | null;
     raw: any;
 }
@@ -96,7 +96,7 @@ function parseKlikDate(s: any): Date | null {
 export async function createQrisTransaction(input: CreateQrisInput): Promise<CreateQrisResult> {
     const cfg = await getKlikQrisConfig();
     if (!cfg.apiKey || !cfg.merchantId) {
-        throw new Error("KlikQRIS belum dikonfigurasi (API key / merchant id kosong)");
+        throw new Error("KlikQRIS is not configured (API key / merchant ID is empty)");
     }
 
     const url = `${cfg.baseUrl}/qris/create`;
@@ -127,12 +127,12 @@ export async function createQrisTransaction(input: CreateQrisInput): Promise<Cre
         }
         if (!res.ok || json?.status === false) {
             const msg = json?.message || `HTTP ${res.status}`;
-            logger.error("KlikQRIS", `Create gagal: ${msg} | ${text.slice(0, 300)}`);
+            logger.error("KlikQRIS", `Create failed: ${msg} | ${text.slice(0, 300)}`);
             throw new Error(`KlikQRIS: ${msg}`);
         }
     } catch (e: any) {
         logger.error("KlikQRIS", "Create transaction error:", e);
-        throw new Error(e?.message || "Gagal menghubungi KlikQRIS");
+        throw new Error(e?.message || "Failed to contact KlikQRIS");
     }
 
     const data = json?.data || {};
@@ -150,7 +150,7 @@ export async function createQrisTransaction(input: CreateQrisInput): Promise<Cre
 
 /**
  * Normalisasi status KlikQRIS -> status internal.
- * (status endpoint pakai "SUCCESS", webhook pakai "PAID")
+ * (the status endpoint uses "SUCCESS"; the webhook uses "PAID")
  */
 export function normalizeStatus(raw: string | undefined | null): NormalizedStatus {
     const s = String(raw || "").toUpperCase();
@@ -167,7 +167,7 @@ export function normalizeStatus(raw: string | undefined | null): NormalizedStatu
 export async function checkQrisStatus(orderId: string): Promise<{ status: NormalizedStatus; raw: any }> {
     const cfg = await getKlikQrisConfig();
     if (!cfg.apiKey || !cfg.merchantId) {
-        throw new Error("KlikQRIS belum dikonfigurasi");
+        throw new Error("KlikQRIS is not configured");
     }
 
     const url = `${cfg.baseUrl}/qris/status/${encodeURIComponent(orderId)}`;
@@ -189,7 +189,7 @@ export async function checkQrisStatus(orderId: string): Promise<{ status: Normal
         }
     } catch (e: any) {
         logger.error("KlikQRIS", "Status check error:", e);
-        throw new Error(e?.message || "Gagal cek status KlikQRIS");
+        throw new Error(e?.message || "Failed to check KlikQRIS status");
     }
 
     const statusRaw = json?.data?.status ?? json?.status;
@@ -198,8 +198,8 @@ export async function checkQrisStatus(orderId: string): Promise<{ status: Normal
 
 /**
  * Validasi webhook KlikQRIS.
- * Sesuai dok: bandingkan `signature` di payload callback dengan
- * `signature` yang diterima saat create (disimpan di Payment.signature).
+ * According to the documentation: compare the `signature` in the callback
+ * payload with the `signature` received during creation (stored in Payment.signature).
  */
 export function verifyCallbackSignature(payloadSignature: string | null | undefined, storedSignature: string | null | undefined): boolean {
     if (!storedSignature || !payloadSignature) return false;

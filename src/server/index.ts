@@ -124,11 +124,11 @@ app.prepare().then(() => {
 
     // --- WA-AKG Monitor Heartbeat ---
     // Sends a ping every 30 seconds to the monitoring server
-    // Hanya untuk dokumentasi ada berapa layanan WA-AKG yang aktif. 
-    // Hanya untuk memantau tidak bermaksud lain. Semakin banyak WA-AKG yang aktif = semakin semangat saya mengembangkan WA-AKG ini.
-    // Terima kasih telah menggunakan WA-AKG.
+    // This is only to document how many active WA-AKG services exist.
+    // It is monitoring only and has no other purpose. More active WA-AKG services
+    // help guide further development. Thank you for using WA-AKG.
     const MONITOR_URL = "https://api-wa-akg.aikeigroup.net/api/ping";
-    const APP_URL = process.env.BASE_URL || `http://${hostname}:${port}`; // Kamu bisa mengganti ini untuk keamanan WA-AKG kamu. Tapi jangan menghapus semua Heartbeat nya. Terima Kasih.
+    const APP_URL = process.env.BASE_URL || `http://${hostname}:${port}`; // You can change this for your WA-AKG security, but do not remove the heartbeat entirely.
     const APP_NAME = process.env.APP_NAME || "WA-AKG";
 
     const sendHeartbeat = async () => {
@@ -159,10 +159,10 @@ app.prepare().then(() => {
     // --------------------------------
 
     // --- Self keep-alive (anti idle-sleep) ---
-    // Beberapa platform (mis. Render free) menidurkan service kalau tidak ada
-    // trafik HTTP masuk → sesi WhatsApp ikut mati. Ping URL publik sendiri
-    // secara berkala membuat platform menganggap service tetap aktif.
-    // Hanya jalan kalau BASE_URL di-set ke URL publik (https) & tidak dinonaktifkan.
+    // Some platforms (for example, Render free) put services to sleep without
+    // incoming HTTP traffic, which also kills WhatsApp sessions. Periodically pinging
+    // the public URL keeps the platform treating the service as active.
+    // Runs only when BASE_URL is set to a public HTTPS URL and is not disabled.
     const baseUrl = process.env.BASE_URL || "";
     const keepAliveEnabled = baseUrl.startsWith("https://") && process.env.DISABLE_KEEPALIVE !== "true";
     if (keepAliveEnabled) {
@@ -170,7 +170,7 @@ app.prepare().then(() => {
         try {
           await fetch(`${baseUrl.replace(/\/$/, "")}/api/health`, { method: "GET" });
         } catch {
-          // diam-diam gagal, coba lagi interval berikutnya
+          // Fail silently and try again on the next interval.
         }
       };
       // Ping every 4 minutes (below common idle-sleep threshold of ~15 mins).

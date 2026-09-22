@@ -9,9 +9,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   callbacks: {
     ...authConfig.callbacks,
-    // Override jwt: refresh role dari DB secara berkala (node runtime) supaya
-    // perubahan role (mis. dijadikan SUPERADMIN) langsung berlaku tanpa harus
-    // logout/login. auth.config.ts (edge/middleware) tetap pakai jwt default tanpa DB.
+          // Override jwt: refresh the role from the database periodically (Node runtime) so
+          // role changes (for example, becoming SUPERADMIN) apply without logout/login.
+          // auth.config.ts (edge/middleware) continues using the default JWT without database access.
     async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
@@ -29,7 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (dbUser) token.role = dbUser.role;
           token.roleCheckedAt = Date.now();
         } catch {
-          // Pertahankan role lama kalau query gagal (jangan blokir auth).
+          // Keep the previous role if the query fails; do not block authentication.
         }
       }
       return token;

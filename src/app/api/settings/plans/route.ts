@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ status: false, message: "Invalid JSON" }, { status: 400 });
     }
 
-    // Normalisasi tipe angka & array fitur agar tidak menyimpan string mentah.
+    // Normalize numeric types and feature arrays so raw strings are not stored.
     const normalized: Record<string, any> = {};
     for (const id of PLAN_ORDER) {
         const o = body?.[id];
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const all = await getMergedPlans();
     return NextResponse.json({
         status: true,
-        message: "Konfigurasi plan disimpan",
+        message: "Plan configuration saved",
         data: PLAN_ORDER.map((id) => all[id]),
         saved,
     });

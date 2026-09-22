@@ -6,8 +6,8 @@ import crypto from "crypto";
 
 export const runtime = "nodejs";
 
-// Kirim payload uji ke URL webhook dan kembalikan status HTTP-nya.
-// Berguna untuk men-debug webhook yang gagal (mis. 404) tanpa menebak-nebak.
+// Send a test payload to the webhook URL and return its HTTP status.
+// Useful for debugging failed webhooks (for example, 404) without guesswork.
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ sessionId: string; id: string }> }
@@ -43,7 +43,7 @@ export async function POST(
         return NextResponse.json({ status: false, message: "Webhook not found" }, { status: 404 });
     }
 
-    // Proteksi SSRF — pastikan URL aman (bukan localhost/IP internal).
+    // SSRF protection — ensure the URL is safe (not localhost/internal IP).
     const urlCheck = validateExternalUrl(webhook.url);
     if (!urlCheck.valid) {
         return NextResponse.json(

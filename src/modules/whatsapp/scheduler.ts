@@ -20,13 +20,13 @@ const checkScheduledMessages = async () => {
         }
 
         for (const msg of pendingMessages) {
-            // Plan gating: skip kalau plan pemilik session tidak mengizinkan scheduler.
+            // Plan gating: skip if the session owner's plan does not allow scheduling.
             const ownerSess = await prisma.session.findUnique({
                 where: { id: msg.sessionId },
                 select: { userId: true }
             });
             if (ownerSess && !(await userPlanAllows(ownerSess.userId, "scheduler"))) {
-                logger.debug("Scheduler", `Skip msg ${msg.id}: plan tidak mengizinkan scheduler`);
+                logger.debug("Scheduler", `Skip msg ${msg.id}: plan does not allow scheduling`);
                 continue;
             }
 
@@ -76,11 +76,11 @@ const checkScheduledMessages = async () => {
         }
     } catch (e: any) {
         const code = e?.code;
-        // Error koneksi transient (mis. Neon free-tier cold start / auto-suspend).
-        // Jangan teriak ERROR — cukup warning ringan & skip siklus, nanti dicoba lagi.
+        // Transient connection error (for example, Neon free-tier cold start/auto-suspend).
+        // Use a light warning and skip this cycle; it will be retried later.
         const connErrors = ["P1001", "P1002", "P1008", "P1017"];
         if (connErrors.includes(code)) {
-            logger.warn("Scheduler", `Database belum siap (${code}) — skip siklus ini, dicoba lagi 30s lagi.`);
+            logger.warn("Scheduler", `Database is not ready (${code}) — skipping this cycle and retrying in 30 seconds.`);
         } else {
             const detail = e?.message || String(e);
             logger.error("Scheduler", `Error executing scheduler loop:${code ? ` [${code}]` : ""} ${detail}`);

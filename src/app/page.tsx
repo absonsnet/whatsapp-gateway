@@ -8,8 +8,8 @@ import fs from "fs";
 import path from "path";
 import { getBrandConfig } from "@/lib/branding";
 
-// Harga plan bisa diubah SUPERADMIN dan disimpan di DB. Halaman ini HARUS dynamic
-// supaya selalu membaca harga terbaru, bukan versi statis hasil build.
+// Plan prices can be changed by SUPERADMIN and stored in the database. This page
+// must be dynamic so it always reads the latest prices instead of a static build.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
@@ -40,7 +40,7 @@ export default async function Home() {
 
   const { appName } = await getBrandConfig();
 
-  // Domain aktif (ikut host yang sedang dipakai), untuk mockup window bar.
+  // Active domain (using the current host) for the window-bar mockup.
   const hdrs = await headers();
   const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "dashboard";
 

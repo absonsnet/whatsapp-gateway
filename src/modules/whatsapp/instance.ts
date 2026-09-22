@@ -38,8 +38,8 @@ export class WhatsAppInstance {
     isStopped: boolean = false;
 
     // Watchdog support:
-    // - autoReconnect: dimatikan saat sesi diambil alih koneksi lain (replaced)
-    //   supaya watchdog tidak memicu "perang koneksi". Dihidupkan lagi saat init.
+    // - autoReconnect: disabled when the session is taken over by another connection (replaced)
+    //   so the watchdog does not trigger "connection conflicts". Enabled again during init.
     // - initializing/lastInitAt: cegah watchdog double-init saat handshake berjalan.
     autoReconnect: boolean = true;
     initializing: boolean = false;
@@ -51,10 +51,10 @@ export class WhatsAppInstance {
 
     /**
      * Cek apakah websocket Baileys benar-benar masih hidup.
-     * Kadang status internal "CONNECTED" tapi websocket sudah mati diam-diam
-     * (zombie) tanpa memicu event close → pesan gagal terkirim. Watchdog pakai
-     * ini untuk memaksa reconnect. Defensif: kalau tidak yakin, anggap hidup
-     * supaya tidak reconnect palsu.
+    * Sometimes the internal status is "CONNECTED" while the websocket has silently died
+    * (zombie) without triggering a close event, so messages fail to send. The watchdog
+    * uses this to force a reconnect. Be defensive: when uncertain, consider it alive
+    * to avoid false reconnects.
      */
     isSocketAlive(): boolean {
         try {
@@ -75,9 +75,9 @@ export class WhatsAppInstance {
     }
 
     async init() {
-        // Init = kita memang ingin sesi ini hidup. Reset flag supaya:
-        // - sesi yang sebelumnya di-stop bisa start lagi (QR muncul),
-        // - sesi yang sebelumnya "replaced" boleh auto-reconnect lagi.
+        // Init means we want this session alive. Reset flags so:
+        // - a previously stopped session can start again (QR appears),
+        // - a previously "replaced" session can auto-reconnect again.
         this.isStopped = false;
         this.autoReconnect = true;
         this.initializing = true;
@@ -96,9 +96,9 @@ export class WhatsAppInstance {
         const { state, saveCreds } = await usePrismaAuthState(this.sessionId);
         const { version } = await fetchLatestBaileysVersion();
 
-        // Bersihin socket lama dulu sebelum bikin yang baru.
+        // Clean up the old socket before creating a new one.
         // Tanpa ini, tiap reconnect ninggalin "ghost socket" yang masih
-        // ngeluarin event (QR storm) → gejala "scan tapi gak konek / putus terus".
+            // emitting events (QR storm), causing "scan but never connects / keeps disconnecting".
         if (this.socket) {
             try {
                 this.socket.ev.removeAllListeners("connection.update");
@@ -130,13 +130,13 @@ export class WhatsAppInstance {
         const sock = this.socket;
         const sessionId = this.sessionId;
         this.socket.sendMessage = async function (jid: string, content: any, options?: any) {
-            // Command interaktif (kick, ping, dll) pakai skipQueue:true → kirim
-            // instan tanpa delay "mengetik". Anti-ban hanya untuk auto-reply/broadcast.
+            // Interactive commands (kick, ping, etc.) use skipQueue:true and send
+            // instantly without the typing delay. Anti-ban is only for auto-reply/broadcast.
             if (options?.skipQueue) {
                 const { skipQueue, ...rest } = options;
                 return originalSendMessage(jid, content, rest);
             }
-            // Anti-spam throttle (antri sesuai rate limit)
+            // Anti-spam throttle (queued according to the rate limit).
             await antispam.enqueue(sessionId, jid, content);
             // Anti-ban humanizer (presence "mengetik" + jeda manusiawi)
             await antiban.humanize(sock, sessionId, jid, content);
@@ -181,8 +181,8 @@ export class WhatsAppInstance {
             if (connection === "close") {
                 const code = (lastDisconnect?.error as any)?.output?.statusCode;
                 const isLoggedOut = code === DisconnectReason.loggedOut;
-                // connectionReplaced (440): sesi diambil alih device/instance LAIN
-                // (mis. app dibuka di tempat lain, atau 2 server pakai sesi yang sama).
+                // connectionReplaced (440): session taken over by ANOTHER device/instance
+                // (for example, the app is open elsewhere or two servers use the same session).
                 const isReplaced = code === DisconnectReason.connectionReplaced;
 
                 // Stop the periodic group sync interval
@@ -192,7 +192,7 @@ export class WhatsAppInstance {
                 }
 
                 // Only reconnect if NOT logged out, NOT replaced, AND NOT explicitly stopped.
-                // Reconnect saat "replaced" = perang koneksi (konek-disconnect terus) → jangan.
+                // Reconnecting after "replaced" causes connection conflicts (connect/disconnect repeatedly) -> do not.
                 const shouldReconnect = !isLoggedOut && !isReplaced && !this.isStopped;
 
                 // Determine status based on reason
@@ -225,11 +225,11 @@ export class WhatsAppInstance {
                     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
                     const delay = Math.min(30000, 3000 * (this.reconnectAttempts + 1));
                     this.reconnectAttempts++;
-                    logger.info("Instance", `Session ${this.sessionId} reconnect dalam ${delay}ms (percobaan ke-${this.reconnectAttempts})`);
+                    logger.info("Instance", `Session ${this.sessionId} reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
                     this.reconnectTimer = setTimeout(() => {
                         this.reconnectTimer = null;
                         if (this.isStopped) return;
-                        this.init().catch(e => logger.error("Instance", "Reconnect gagal:", e));
+                        this.init().catch(e => logger.error("Instance", "Reconnect failed:", e));
                     }, delay);
                 } else if (isLoggedOut) {
                     // Explicit logout: delete credentials
@@ -253,10 +253,10 @@ export class WhatsAppInstance {
                     logger.warn("Instance", `Session ${this.sessionId} stopped. Credentials preserved for auto-login.`);
                     this.socket = null;
                 } else if (isReplaced) {
-                    // Sesi diambil alih koneksi lain. JANGAN reconnect (hindari perang koneksi).
-                    // Credential TIDAK dihapus — user bisa Start lagi manual kalau memang mau pindah ke sini.
-                    this.autoReconnect = false; // watchdog juga tidak boleh reconnect otomatis
-                    logger.warn("Instance", `Session ${this.sessionId} digantikan koneksi lain (connectionReplaced). Reconnect dihentikan. Pastikan sesi WhatsApp ini tidak dipakai di tempat lain (mis. server lokal + Railway bersamaan), lalu Start ulang bila perlu.`);
+                    // The session was taken over by another connection. Do NOT reconnect (avoid connection conflicts).
+                    // Credentials are NOT deleted; the user can start it manually if they want to move it here.
+                    this.autoReconnect = false; // watchdog must not reconnect automatically either
+                    logger.warn("Instance", `Session ${this.sessionId} was replaced by another connection (connectionReplaced). Reconnect stopped. Ensure this WhatsApp session is not used elsewhere (for example, local server and Railway at the same time), then restart if needed.`);
                     this.socket = null;
                 }
             }
@@ -267,7 +267,7 @@ export class WhatsAppInstance {
                 this.qr = null;
                 this.startTime = new Date();
 
-                // Sukses konek: reset counter & batalin timer reconnect yang masih antri
+                // Connection succeeded: reset the counter and cancel queued reconnect timers.
                 this.reconnectAttempts = 0;
                 if (this.reconnectTimer) {
                     clearTimeout(this.reconnectTimer);

@@ -18,7 +18,7 @@ export default function SystemMonitorPage() {
     const fetchStats = async () => {
         try {
             const res = await fetch("/api/system/monitor");
-            if (!res.ok) return; // 401/403/500 — diam saja, jangan toast spam
+            if (!res.ok) return; // 401/403/500 — stay quiet and do not spam toasts.
             const result = await res.json();
             if (result.status) {
                 setData(result.data);

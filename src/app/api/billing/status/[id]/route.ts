@@ -6,7 +6,7 @@ import { markPaymentPaidAndActivate } from "@/lib/billing";
 import { logger } from "@/lib/logger";
 
 // GET /api/billing/status/[id] — cek status pembayaran (polling dari UI).
-// Selain baca DB, juga konfirmasi ke KlikQRIS biar update kalau callback telat.
+// In addition to reading the database, confirm with KlikQRIS so late callbacks are handled.
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -29,7 +29,7 @@ export async function GET(
         );
     }
 
-    // Kalau masih pending & punya reference, konfirmasi ke gateway
+    // If still pending and a reference exists, confirm with the gateway.
     if (payment.status === "PENDING" && payment.reference) {
         try {
             const { status } = await checkQrisStatus(payment.reference);
@@ -39,7 +39,7 @@ export async function GET(
                 await prisma.payment.update({ where: { id: payment.id }, data: { status } });
             }
         } catch (e) {
-            logger.warn("Billing", `Polling status gagal untuk ${payment.id}`, e);
+            logger.warn("Billing", `Status polling failed for ${payment.id}`, e);
         }
     }
 

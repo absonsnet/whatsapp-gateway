@@ -6,7 +6,7 @@ import { createQrisTransaction, isKlikQrisConfigured } from "@/lib/klikqris";
 import { logger } from "@/lib/logger";
 
 // POST /api/billing/checkout  { plan: "STANDARD" | "PRO" }
-// Membuat transaksi QRIS KlikQRIS dan mengembalikan data QR untuk dibayar.
+// Create a KlikQRIS transaction and return the QR data for payment.
 export async function POST(request: NextRequest) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // Buat record Payment dulu (PENDING) supaya punya id sebagai order_id
+    // Create the Payment record first (PENDING) so its ID can be used as order_id.
     const payment = await prisma.payment.create({
         data: {
             userId: user.id,

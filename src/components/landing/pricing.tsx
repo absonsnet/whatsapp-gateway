@@ -8,7 +8,7 @@ export async function PricingCards({ ctaHref = "/dashboard/billing" }: { ctaHref
     const all = await getMergedPlans();
     return (
         <div className="relative">
-            {/* Mobile: geser ke samping (snap scroll). Desktop: grid. */}
+            {/* Mobile: horizontal snap scrolling. Desktop: grid. */}
             <div
                 className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 max-w-7xl mx-auto items-stretch
                            overflow-x-auto md:overflow-visible snap-x snap-mandatory
@@ -20,7 +20,7 @@ export async function PricingCards({ ctaHref = "/dashboard/billing" }: { ctaHref
                     const isFree = plan.price === 0;
                     const isCustom = plan.price === null;
 
-                    // Benefit = fitur aktif (dari toggle) + benefit teks tambahan.
+                    // Benefits combine enabled capabilities and additional feature text.
                     const capBenefits = CAPABILITIES.filter((c) => plan.capabilities?.[c.id]).map((c) => c.label);
                     const benefits = [...capBenefits, ...(plan.features || [])];
 
@@ -47,14 +47,14 @@ export async function PricingCards({ ctaHref = "/dashboard/billing" }: { ctaHref
                                 {formatIDR(plan.price)}
                             </span>
                             {!isFree && !isCustom && (
-                                <span className="text-muted-foreground text-sm mb-1">/bulan</span>
+                                <span className="text-muted-foreground text-sm mb-1">/month</span>
                             )}
                         </div>
 
                         <p className="text-sm text-muted-foreground mb-6">
                             {plan.monthlyLimit < 0
-                                ? "Request tanpa batas"
-                                : `${plan.monthlyLimit.toLocaleString("id-ID")} request / bulan`}
+                                ? "Unlimited requests"
+                                : `${plan.monthlyLimit.toLocaleString("id-ID")} requests / month`}
                         </p>
 
                         <ul className="space-y-3 mb-8 flex-1">
@@ -71,7 +71,7 @@ export async function PricingCards({ ctaHref = "/dashboard/billing" }: { ctaHref
                                 className="w-full rounded-full h-12"
                                 variant={plan.highlight ? "default" : "glass"}
                             >
-                                {isFree ? "Mulai Gratis" : isCustom ? "Hubungi Kami" : `Pilih ${plan.name}`}
+                                {isFree ? "Start Free" : isCustom ? "Contact Us" : `Choose ${plan.name}`}
                             </Button>
                         </Link>
                     </div>
@@ -79,8 +79,8 @@ export async function PricingCards({ ctaHref = "/dashboard/billing" }: { ctaHref
             })}
             </div>
 
-            {/* Hint geser di mobile */}
-            <p className="md:hidden text-center text-xs text-muted-foreground mt-1">← geser untuk lihat plan lain →</p>
+            {/* Mobile scrolling hint */}
+            <p className="md:hidden text-center text-xs text-muted-foreground mt-1">← swipe to see more plans →</p>
         </div>
     );
 }

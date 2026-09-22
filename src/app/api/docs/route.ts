@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getApiDocs } from "@/lib/swagger";
 import { getBrandConfig } from "@/lib/branding";
 
-// next-swagger-doc memindai file sumber pakai `fs`, jadi WAJIB Node.js runtime
-// (bukan Edge) dan jangan di-cache statis saat build (force-dynamic).
+// next-swagger-doc scans source files with `fs`, so this MUST use the Node.js runtime
+// (not Edge) and must not be statically cached during the build (force-dynamic).
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -16,8 +16,8 @@ export async function GET() {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {
-    // Jangan biarkan halaman /swagger blank kalau pemindaian spec gagal di prod.
-    // Kembalikan spec minimal yang valid + info error supaya UI tetap render.
+    // Do not let /swagger render blank if spec scanning fails in production.
+    // Return a minimal valid spec with error information so the UI still renders.
     console.error("[api/docs] Failed to build OpenAPI spec:", err);
     const fallback = {
       openapi: "3.0.0",
@@ -25,8 +25,8 @@ export async function GET() {
         title: "WA-AKG API Documentation",
         version: "1.2.0",
         description:
-          "⚠️ Gagal memuat spesifikasi lengkap di server. Cek log server. " +
-          "Endpoint tetap berfungsi; ini hanya tampilan dokumentasinya.",
+          "⚠️ Failed to load the complete specification on the server. Check the server log. " +
+          "The endpoints still work; only the documentation display is affected.",
       },
       paths: {},
     };

@@ -1,19 +1,19 @@
 // ============================================================
-// PLAN & PRICING CONFIG (sumber kebenaran tunggal)
+// PLAN & PRICING CONFIG (single source of truth)
 // ------------------------------------------------------------
-// Ubah angka/harga di sini aja — landing page, pembatasan API,
-// dan checkout semua ikut dari config ini.
+// Change values and prices here — the landing page, API limits,
+// and checkout all use this configuration.
 //
-// Catatan limit:
-// - FREE  : 1000 request/bulan, 100 request/hari (sesuai permintaan)
-// - lainnya: REKOMENDASI, silakan disesuaikan kapan saja.
+// Limit notes:
+// - FREE: 1000 requests/month, 100 requests/day (as requested)
+// - Others: RECOMMENDED, adjust as needed.
 // - limit -1 = unlimited.
 // ============================================================
 
 export type PlanId = "FREE" | "STANDARD" | "PRO" | "ENTERPRISE";
 
-// Fitur yang bisa di-on/off per plan (toggle). Dipakai untuk gating akses +
-// otomatis tampil sebagai benefit di halaman pricing.
+// Features that can be toggled per plan. Used for access gating and
+// automatically displayed as benefits on the pricing page.
 export type Capability =
     | "autoReply"
     | "broadcast"
@@ -36,21 +36,21 @@ export const CAPABILITIES: { id: Capability; label: string }[] = [
 export interface PlanConfig {
     id: PlanId;
     name: string;
-    /** Harga per bulan dalam IDR. 0 = gratis, null = custom/hubungi sales */
+    /** Monthly price in IDR. 0 = free, null = custom/contact sales */
     price: number | null;
-    /** Durasi langganan dalam hari saat dibeli */
+    /** Subscription duration in days when purchased */
     durationDays: number;
-    /** Limit request API per hari (-1 = unlimited) */
+    /** API request limit per day (-1 = unlimited) */
     dailyLimit: number;
-    /** Limit request API per bulan (-1 = unlimited) */
+    /** API request limit per month (-1 = unlimited) */
     monthlyLimit: number;
-    /** Maksimum sesi WhatsApp (-1 = unlimited) */
+    /** Maximum WhatsApp sessions (-1 = unlimited) */
     maxSessions: number;
-    /** Ditandai "paling populer" di UI */
+    /** Marked as "most popular" in the UI */
     highlight?: boolean;
-    /** Fitur on/off per plan (gating + ditampilkan sebagai benefit) */
+    /** Features enabled per plan (gating + displayed as benefits) */
     capabilities: Record<Capability, boolean>;
-    /** Daftar benefit TAMBAHAN (teks bebas) di kartu pricing */
+    /** Additional benefits (free-form text) shown on pricing cards */
     features: string[];
 }
 
@@ -59,7 +59,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
         id: "FREE",
         name: "Free",
         price: 0,
-        durationDays: 0, // tidak kedaluwarsa
+        durationDays: 0, // never expires
         dailyLimit: 100,
         monthlyLimit: 1000,
         maxSessions: 1,
@@ -73,18 +73,18 @@ export const PLANS: Record<PlanId, PlanConfig> = {
             sticker: true,
         },
         features: [
-            "1 sesi WhatsApp",
-            "100 request / hari",
-            "1.000 request / bulan",
-            "Auto-reply dasar",
+            "1 WhatsApp session",
+            "100 requests / day",
+            "1,000 requests / month",
+            "Basic auto-reply",
             "Akses REST API",
-            "Komunitas support"
+            "Community support"
         ]
     },
     STANDARD: {
         id: "STANDARD",
         name: "Standard",
-        price: 50000, // rekomendasi — silakan disesuaikan
+        price: 50000, // recommended — adjust as needed
         durationDays: 30,
         dailyLimit: 1000,
         monthlyLimit: 20000,
@@ -100,18 +100,18 @@ export const PLANS: Record<PlanId, PlanConfig> = {
             sticker: true,
         },
         features: [
-            "3 sesi WhatsApp",
-            "1.000 request / hari",
-            "20.000 request / bulan",
+            "3 WhatsApp sessions",
+            "1,000 requests / day",
+            "20,000 requests / month",
             "Auto-reply + scheduler",
-            "Webhook event",
+            "Webhook events",
             "Email support"
         ]
     },
     PRO: {
         id: "PRO",
         name: "Pro",
-        price: 150000, // rekomendasi — silakan disesuaikan
+        price: 150000, // recommended — adjust as needed
         durationDays: 30,
         dailyLimit: 5000,
         monthlyLimit: 100000,
@@ -126,10 +126,10 @@ export const PLANS: Record<PlanId, PlanConfig> = {
             sticker: true,
         },
         features: [
-            "10 sesi WhatsApp",
-            "5.000 request / hari",
-            "100.000 request / bulan",
-            "Semua fitur Standard",
+            "10 WhatsApp sessions",
+            "5,000 requests / day",
+            "100,000 requests / month",
+            "All Standard features",
             "Auto broadcast",
             "Priority support"
         ]
@@ -137,7 +137,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     ENTERPRISE: {
         id: "ENTERPRISE",
         name: "Enterprise",
-        price: null, // custom / hubungi sales
+        price: null, // custom / contact sales
         durationDays: 30,
         dailyLimit: -1,
         monthlyLimit: -1,
@@ -152,11 +152,11 @@ export const PLANS: Record<PlanId, PlanConfig> = {
             sticker: true,
         },
         features: [
-            "Sesi WhatsApp unlimited",
-            "Request unlimited",
-            "Semua fitur Pro",
+            "Unlimited WhatsApp sessions",
+            "Unlimited requests",
+            "All Pro features",
             "SLA & dedicated server",
-            "Onboarding khusus",
+            "Custom onboarding",
             "Dedicated support"
         ]
     }
@@ -169,14 +169,14 @@ export function getPlanConfig(plan: string | null | undefined): PlanConfig {
     return PLANS[id] || PLANS.FREE;
 }
 
-/** Cek apakah sebuah plan mengizinkan kapabilitas tertentu. */
+/** Check whether a plan allows a capability. */
 export function planAllows(cfg: PlanConfig, cap: Capability): boolean {
     return cfg?.capabilities?.[cap] !== false;
 }
 
 /**
- * Plan efektif: kalau langganan berbayar sudah lewat masa aktif,
- * otomatis dianggap FREE.
+ * Effective plan: paid subscriptions automatically become FREE
+ * after their active period expires.
  */
 export function effectivePlan(user: {
     plan?: string | null;
@@ -185,7 +185,7 @@ export function effectivePlan(user: {
     const plan = (user.plan || "FREE").toUpperCase() as PlanId;
     if (plan === "FREE" || !PLANS[plan]) return "FREE";
 
-    // FREE tidak punya expiry; plan berbayar dicek tanggalnya
+    // FREE has no expiry; paid plans are checked by date.
     if (user.planExpiresAt) {
         const exp = new Date(user.planExpiresAt).getTime();
         if (!Number.isNaN(exp) && exp < Date.now()) return "FREE";

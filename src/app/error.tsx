@@ -20,8 +20,8 @@ export default function GlobalError({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Log error lengkap ke console supaya akar masalah kelihatan di DevTools
-        // (pesan generik di bawah menyembunyikan penyebab asli).
+        // Log the complete error so the root cause is visible in DevTools
+        // (the generic message below hides the original cause).
         console.error("[GlobalError]", {
             message: error?.message,
             digest: error?.digest,
