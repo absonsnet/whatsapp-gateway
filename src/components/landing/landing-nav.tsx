@@ -11,9 +11,11 @@ export function LandingNav() {
     // null = belum tahu, true/false = status login. Pakai endpoint next-auth
     // (/api/auth/session) supaya tidak perlu SessionProvider di halaman publik.
     const [authed, setAuthed] = useState<boolean | null>(null);
+    const [appName, setAppName] = useState("WA-AKG");
 
     useEffect(() => {
         let active = true;
+
         fetch("/api/auth/session", { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
@@ -22,6 +24,18 @@ export function LandingNav() {
             .catch(() => {
                 if (active) setAuthed(false);
             });
+
+        fetch("/api/settings/system", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!active) return;
+                const nextName = d?.data?.appName || process.env.NEXT_PUBLIC_APP_NAME || "WA-AKG";
+                if (nextName) setAppName(nextName);
+            })
+            .catch(() => {
+                if (active) setAppName(process.env.NEXT_PUBLIC_APP_NAME || "WA-AKG");
+            });
+
         return () => {
             active = false;
         };
@@ -38,9 +52,9 @@ export function LandingNav() {
                 <div className="glass rounded-full px-4 md:px-8 h-14 md:h-16 flex items-center justify-between mx-auto shadow-lg shadow-black/5 dark:shadow-black/20 border border-white/40 dark:border-white/10">
                     <Link href="/" className="flex items-center gap-3 font-bold text-xl shrink-0">
                         <div className="relative h-8 w-8 md:h-10 md:w-10 overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-lg shadow-primary/10">
-                            <Image src="/logo.svg" alt="RifalosID logo" width={40} height={40} className="h-full w-full object-cover" />
+                            <Image src="/logo.svg" alt={`${appName} logo`} width={40} height={40} className="h-full w-full object-cover" />
                         </div>
-                        <span className="text-foreground tracking-tight" translate="no">RifalosID</span>
+                        <span className="text-foreground tracking-tight" translate="no">{appName}</span>
                     </Link>
 
                     {/* Desktop nav */}

@@ -44,6 +44,12 @@ export default async function Home() {
     console.error("Failed to read package.json", error);
   }
 
+  const appConfig = await prisma.systemConfig.findUnique({
+    where: { id: "default" },
+    select: { appName: true },
+  }).catch(() => null);
+  const appName = appConfig?.appName || process.env.APP_NAME || "WA-AKG";
+
   // Domain aktif (ikut host yang sedang dipakai), untuk mockup window bar.
   const hdrs = await headers();
   const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "dashboard";
@@ -247,7 +253,7 @@ export default async function Home() {
               <div className="p-2 rounded-xl bg-primary/10">
                 <Bot className="h-6 w-6 text-primary" />
               </div>
-              <span className="text-xl font-bold text-foreground" translate="no">RifalosID</span>
+              <span className="text-xl font-bold text-foreground" translate="no">{appName}</span>
             </div>
             <div className="flex gap-8 text-sm font-medium">
               <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
@@ -255,7 +261,7 @@ export default async function Home() {
               <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors">API &amp; Docs</Link>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} <span translate="no">RifalosID</span>. All rights reserved.
+              © {new Date().getFullYear()} <span translate="no">{appName}</span>. All rights reserved.
             </p>
           </div>
         </div>
