@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getApiDocs } from "@/lib/swagger";
+import { getBrandConfig } from "@/lib/branding";
 
 // next-swagger-doc memindai file sumber pakai `fs`, jadi WAJIB Node.js runtime
 // (bukan Edge) dan jangan di-cache statis saat build (force-dynamic).
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const spec = getApiDocs();
+    const { appName } = await getBrandConfig();
+    spec.info.title = `${appName} API Documentation`;
     return NextResponse.json(spec, {
       headers: { "Cache-Control": "no-store" },
     });

@@ -22,9 +22,10 @@ interface TocSection {
 interface DocsClientProps {
     content: string;
     toc: TocSection[];
+    appName: string;
 }
 
-export function DocsClient({ content, toc }: DocsClientProps) {
+export function DocsClient({ content, toc, appName }: DocsClientProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredToc, setFilteredToc] = useState(toc);
     const [openMobileMenu, setOpenMobileMenu] = useState(false);
@@ -268,7 +269,7 @@ export function DocsClient({ content, toc }: DocsClientProps) {
                 </article>
 
                 <footer className="mt-20 pt-8 border-t text-center text-sm text-gray-400">
-                    <p>© {new Date().getFullYear()} WA-AKG. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} {appName}. All rights reserved.</p>
                 </footer>
             </main>
         </div>

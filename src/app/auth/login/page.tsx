@@ -73,7 +73,7 @@ function LoginForm() {
       <div className="relative z-10 w-full max-w-md p-4 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-8">
           <Link href="/" className="relative mb-4 block overflow-hidden rounded-2xl border border-white/20 bg-white/10 shadow-lg shadow-primary/20 transition-transform hover:scale-105">
-            <Image src="/logo.svg" alt="RifalosID logo" width={64} height={64} className="h-16 w-16 object-cover" />
+            <Image src="/logo.svg" alt="App logo" width={64} height={64} className="h-16 w-16 object-cover" />
           </Link>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome Back</h1>
           <p className="text-muted-foreground mt-2">Sign in to your account</p>

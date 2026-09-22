@@ -4,19 +4,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import { DocsClient } from './docs-client';
-import { prisma } from '@/lib/prisma';
+import { getBrandConfig } from '@/lib/branding';
 import type { Metadata } from 'next';
 
-// Nama app dari Settings (DB) → env APP_NAME → fallback "WA-AKG".
 async function getAppName(): Promise<string> {
-    try {
-        const cfg = await prisma.systemConfig.findUnique({
-            where: { id: 'default' },
-            select: { appName: true },
-        });
-        if (cfg?.appName) return cfg.appName;
-    } catch { /* ignore */ }
-    return process.env.APP_NAME || 'WA-AKG';
+    return (await getBrandConfig()).appName;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -123,7 +115,7 @@ export default async function PublicDocsPage() {
                 </div>
             </header>
 
-            <DocsClient content={content} toc={toc} />
+            <DocsClient content={content} toc={toc} appName={appName} />
         </div>
     );
 }

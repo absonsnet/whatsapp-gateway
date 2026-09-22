@@ -6,12 +6,12 @@ import { useEffect, useState } from "react";
 import { Github, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function LandingNav() {
+export function LandingNav({ initialAppName = "WA-AKG" }: { initialAppName?: string }) {
     const [open, setOpen] = useState(false);
     // null = belum tahu, true/false = status login. Pakai endpoint next-auth
     // (/api/auth/session) supaya tidak perlu SessionProvider di halaman publik.
     const [authed, setAuthed] = useState<boolean | null>(null);
-    const [appName, setAppName] = useState("WA-AKG");
+    const [appName, setAppName] = useState(initialAppName);
 
     useEffect(() => {
         let active = true;
@@ -29,17 +29,17 @@ export function LandingNav() {
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
                 if (!active) return;
-                const nextName = d?.data?.appName || process.env.NEXT_PUBLIC_APP_NAME || "WA-AKG";
+                const nextName = d?.data?.appName || initialAppName;
                 if (nextName) setAppName(nextName);
             })
             .catch(() => {
-                if (active) setAppName(process.env.NEXT_PUBLIC_APP_NAME || "WA-AKG");
+                if (active) setAppName(initialAppName);
             });
 
         return () => {
             active = false;
         };
-    }, []);
+    }, [initialAppName]);
 
     const ctaHref = authed ? "/dashboard" : "/auth/login";
     const ctaLabel = authed ? "Dashboard" : "Sign In";

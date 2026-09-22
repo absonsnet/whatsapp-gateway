@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getBrandConfig } from "@/lib/branding";
 
 export async function GET(request: NextRequest) {
     try {
@@ -18,18 +19,14 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // Public fields (needed for UI branding everywhere)
-        const safeConfig = config ? {
-            appName: config.appName,
-            description: config.description || "WhatsApp Gateway & Management Dashboard",
-            faviconUrl: config.faviconUrl || "/favicon.svg",
-            logoUrl: config.logoUrl,
-            timezone: config.timezone,
-        } : {
-            appName: "WA-AKG",
-            description: "WhatsApp Gateway & Management Dashboard",
-            faviconUrl: "/favicon.svg",
-            timezone: "Asia/Jakarta"
+        // Public branding always comes from the singleton DB row when it exists.
+        const brand = await getBrandConfig();
+        const safeConfig = {
+            appName: brand.appName,
+            description: brand.description,
+            faviconUrl: brand.faviconUrl,
+            logoUrl: brand.logoUrl,
+            timezone: config?.timezone || "Asia/Jakarta",
         };
 
         // Admin-only sensitive fields — return only when caller is SUPERADMIN
@@ -83,8 +80,8 @@ export async function POST(req: NextRequest) {
             update: patch,
             create: {
                 id: "default",
-                appName: appName ?? "WA-AKG",
-                description: description ?? "WhatsApp Gateway & Management Dashboard",
+                appName: appName ?? process.env.APP_NAME ?? "WA-AKG",
+                description: description ?? process.env.APP_DESCRIPTION ?? "WhatsApp Gateway & Management Dashboard",
                 logoUrl: logoUrl ?? "",
                 faviconUrl: faviconUrl ?? "/favicon.svg",
                 timezone: timezone ?? "Asia/Jakarta",

@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { TopLoader } from "@/components/ui/top-loader";
-import { prisma } from "@/lib/prisma";
+import { getBrandConfig } from "@/lib/branding";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,29 +15,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-async function getBrandMetadata(): Promise<{ appName: string; description: string; faviconUrl: string }> {
-  try {
-    const config = await prisma.systemConfig.findUnique({
-      where: { id: "default" },
-      select: { appName: true, description: true, faviconUrl: true },
-    });
-
-    return {
-      appName: config?.appName || process.env.APP_NAME || "WA-AKG",
-      description: config?.description || process.env.APP_DESCRIPTION || "WhatsApp Gateway & Management Dashboard",
-      faviconUrl: config?.faviconUrl || "/favicon.svg",
-    };
-  } catch {
-    return {
-      appName: process.env.APP_NAME || "WA-AKG",
-      description: process.env.APP_DESCRIPTION || "WhatsApp Gateway & Management Dashboard",
-      faviconUrl: "/favicon.svg",
-    };
-  }
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const { appName, description, faviconUrl } = await getBrandMetadata();
+  const { appName, description, faviconUrl, logoUrl } = await getBrandConfig();
   const tabTitle = description ? `${appName} | ${description}` : appName;
 
   return {
@@ -51,14 +30,14 @@ export async function generateMetadata(): Promise<Metadata> {
         { url: "/favicon.svg", type: "image/svg+xml" },
       ],
       shortcut: faviconUrl,
-      apple: "/logo.svg",
+      apple: logoUrl,
     },
     openGraph: {
       title: tabTitle,
       description,
       siteName: appName,
       type: "website",
-      images: [{ url: "/logo.svg", alt: `${appName} logo` }],
+      images: [{ url: logoUrl, alt: `${appName} logo` }],
     },
     robots: {
       index: process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true",

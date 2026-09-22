@@ -2,19 +2,26 @@ import Link from "next/link";
 import { Bot } from "lucide-react";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { PricingCards } from "@/components/landing/pricing";
-
-export const metadata = {
-    title: "Pricing | RifalosID WhatsApp Gateway",
-    description: "Pilih plan yang sesuai kebutuhanmu. Mulai gratis, bayar via QRIS."
-};
+import { getBrandConfig } from "@/lib/branding";
 
 // Render dinamis supaya perubahan plan/pricing dari SUPERADMIN langsung tampil.
 export const dynamic = "force-dynamic";
 
-export default function PricingPage() {
+export async function generateMetadata() {
+    const { appName, description } = await getBrandConfig();
+
+    return {
+        title: `Pricing | ${appName}`,
+        description,
+    };
+}
+
+export default async function PricingPage() {
+    const { appName } = await getBrandConfig();
+
     return (
         <div className="flex min-h-screen flex-col overflow-hidden">
-            <LandingNav />
+            <LandingNav initialAppName={appName} />
 
             <main className="flex-1 pt-36 pb-24">
                 <section className="container px-4 md:px-6">
@@ -47,11 +54,11 @@ export default function PricingPage() {
                             <Bot className="h-5 w-5 text-primary" />
                         </div>
                         <span className="font-bold text-foreground" translate="no">
-                            RifalosID
+                            {appName}
                         </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                        © {new Date().getFullYear()} RifalosID
+                        © {new Date().getFullYear()} {appName}
                     </p>
                 </div>
             </footer>

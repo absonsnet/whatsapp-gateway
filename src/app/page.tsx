@@ -6,20 +6,14 @@ import { PricingCards } from "@/components/landing/pricing";
 import { headers } from "next/headers";
 import fs from "fs";
 import path from "path";
-import { prisma } from "@/lib/prisma";
+import { getBrandConfig } from "@/lib/branding";
 
 // Harga plan bisa diubah SUPERADMIN dan disimpan di DB. Halaman ini HARUS dynamic
 // supaya selalu membaca harga terbaru, bukan versi statis hasil build.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
-  const config = await prisma.systemConfig.findUnique({
-    where: { id: "default" },
-    select: { appName: true, description: true },
-  }).catch(() => null);
-
-  const appName = config?.appName || process.env.APP_NAME || "WA-AKG";
-  const description = config?.description || process.env.APP_DESCRIPTION || "WhatsApp Gateway & Management Dashboard";
+  const { appName, description } = await getBrandConfig();
 
   const tabTitle = description ? `${appName} | ${description}` : appName;
 
@@ -44,11 +38,7 @@ export default async function Home() {
     console.error("Failed to read package.json", error);
   }
 
-  const appConfig = await prisma.systemConfig.findUnique({
-    where: { id: "default" },
-    select: { appName: true },
-  }).catch(() => null);
-  const appName = appConfig?.appName || process.env.APP_NAME || "WA-AKG";
+  const { appName } = await getBrandConfig();
 
   // Domain aktif (ikut host yang sedang dipakai), untuk mockup window bar.
   const hdrs = await headers();
@@ -56,7 +46,7 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col overflow-hidden selection:bg-primary/30 selection:text-primary-foreground">
-      <LandingNav />
+      <LandingNav initialAppName={appName} />
 
       <main className="flex-1">
         {/* ============ HERO ============ */}

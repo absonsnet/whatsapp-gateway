@@ -6,6 +6,7 @@ import { SidebarShell } from "@/components/dashboard/sidebar-shell";
 import { UpdateChecker } from "@/components/dashboard/update-checker";
 import { RegistrationWarning } from "@/components/dashboard/registration-warning";
 import { prisma } from "@/lib/prisma";
+import { getBrandConfig } from "@/lib/branding";
 import { Toaster } from "sonner";
 import { redirect } from "next/navigation";
 import pkg from "../../../package.json";
@@ -37,7 +38,7 @@ export default async function DashboardLayout({
     } catch (e) {
         console.error("DashboardLayout: gagal baca systemConfig", e);
     }
-    const appName = systemConfig?.appName || "WA-AKG";
+    const { appName } = await getBrandConfig();
     const registrationEnabled = systemConfig?.enableRegistration ?? true;
 
     return (

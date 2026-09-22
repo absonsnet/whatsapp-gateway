@@ -12,6 +12,7 @@ export default function ApiDocsPage() {
     const [error, setError] = useState("");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [spec, setSpec] = useState<any>(null);
+    const [appName, setAppName] = useState("WA-AKG");
     const [specError, setSpecError] = useState("");
     const [specLoading, setSpecLoading] = useState(false);
 
@@ -33,6 +34,13 @@ export default function ApiDocsPage() {
             setAuthorized(true);
         }
         setLoading(false);
+
+        fetch("/api/settings/system", { cache: "no-store" })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (data?.data?.appName) setAppName(data.data.appName);
+            })
+            .catch(() => undefined);
 
         return () => {
             console.warn = originalWarn;
@@ -108,7 +116,7 @@ export default function ApiDocsPage() {
                 <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
                     <div className="text-center mb-6">
                         <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                            WA-AKG API Documentation
+                            {appName} API Documentation
                         </h1>
                         <p className="text-gray-600 text-sm">
                             Please authenticate to access Swagger UI
@@ -175,7 +183,7 @@ export default function ApiDocsPage() {
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 shadow-lg">
                 <div className="container mx-auto flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold">WA-AKG API Documentation</h1>
+                        <h1 className="text-2xl font-bold">{appName} API Documentation</h1>
                         <p className="text-blue-100 text-sm mt-1">
                             Interactive API documentation with 58+ endpoints
                         </p>
