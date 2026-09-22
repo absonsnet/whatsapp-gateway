@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const spec = getApiDocs();
+    const spec = getApiDocs() as { info: { title: string } } & Record<string, unknown>;
     const { appName } = await getBrandConfig();
     spec.info.title = `${appName} API Documentation`;
     return NextResponse.json(spec, {
