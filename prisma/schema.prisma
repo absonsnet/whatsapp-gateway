@@ -311,6 +311,7 @@ model BotConfig {
   customMenuText  String? @db.Text
   autoAppendCommands Boolean @default(true) // Auto-append custom commands to menu text
   liveChatTimeout    Int     @default(30)   // Minutes before bot resumes after live chat
+  universalCommands  Json?   // Configurable navigation commands: [{command, action, description}]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

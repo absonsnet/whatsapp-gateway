@@ -63,6 +63,10 @@ export async function GET(
             customMenuText: null,
             autoAppendCommands: true,
             liveChatTimeout: 30,
+            universalCommands: [
+                { command: "0", action: "MAIN_MENU", description: "Return to main menu" },
+                { command: "back", action: "BACK", description: "Go back one level" },
+            ],
         };
 
         return NextResponse.json({ status: true, message: "Bot config fetched successfully", data: session.botConfig });
@@ -130,6 +134,7 @@ export async function POST(
             "customMenuText",
             "autoAppendCommands",
             "liveChatTimeout",
+            "universalCommands",
         ];
         for (const key of passthrough) {
             if (body[key] !== undefined) updateFields[key] = body[key];

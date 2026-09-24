@@ -25,7 +25,14 @@ interface CustomCommand {
     response: string;
     description: string;
     isLiveChat: boolean;
+    isUniversal: boolean;
     subCommands: CustomCommand[];
+}
+
+interface UniversalCommand {
+    command: string;
+    action: string;
+    description: string;
 }
 
 export default function BotSettingsPage() {
@@ -70,6 +77,10 @@ export default function BotSettingsPage() {
         customMenuText: "",
         autoAppendCommands: true,
         liveChatTimeout: 30,
+        universalCommands: [
+            { command: "0", action: "MAIN_MENU", description: "Return to main menu" },
+            { command: "back", action: "BACK", description: "Go back one level" },
+        ] as UniversalCommand[],
     });
     const [botLoading, setBotLoading] = useState(false);
 
@@ -95,7 +106,7 @@ export default function BotSettingsPage() {
             for (const i of path) {
                 target = target[i].subCommands = target[i].subCommands || [];
             }
-            target.push({ command: '', response: '', description: '', isLiveChat: false, subCommands: [] });
+            target.push({ command: '', response: '', description: '', isLiveChat: false, isUniversal: false, subCommands: [] });
             return { ...prev, customCommands: cmds };
         });
     };
@@ -208,6 +219,10 @@ export default function BotSettingsPage() {
                         customMenuText: data.customMenuText || "",
                         autoAppendCommands: data.autoAppendCommands ?? true,
                         liveChatTimeout: data.liveChatTimeout ?? 30,
+                        universalCommands: data.universalCommands || [
+                            { command: "0", action: "MAIN_MENU", description: "Return to main menu" },
+                            { command: "back", action: "BACK", description: "Go back one level" },
+                        ],
                     }));
                 }
             })
@@ -254,6 +269,11 @@ export default function BotSettingsPage() {
         for (const [name, count] of seen) {
             if (count > 1) warnings.push(`"${name}" appears ${count} times`);
             if (BUILTIN_COMMANDS.includes(name.toLowerCase())) warnings.push(`"${name}" conflicts with built-in command`);
+        }
+        // Check conflicts with universal commands
+        const uniNames = (botConfig.universalCommands || []).map((uc: any) => uc.command?.toLowerCase()).filter(Boolean);
+        for (const [name] of seen) {
+            if (uniNames.includes(name.toLowerCase())) warnings.push(`"${name}" conflicts with universal command`);
         }
         if (warnings.length > 0) {
             toast.warning(`Command conflicts: ${warnings.join(", ")}`);
@@ -973,6 +993,19 @@ export default function BotSettingsPage() {
                                                 }} />
                                         </div>
 
+                                        <div className="flex items-center justify-between space-x-2 border p-3 rounded-lg bg-purple-500/5 border-purple-500/20">
+                                            <Label htmlFor={`universal-${idx}`} className="flex flex-col space-y-1 cursor-pointer">
+                                                <span className="font-medium flex items-center gap-1.5">🌐 Available in All Menus</span>
+                                                <span className="font-normal text-[10px] text-muted-foreground">When enabled, this command works in every menu level (main + all sub-menus).</span>
+                                            </Label>
+                                            <Switch id={`universal-${idx}`} checked={cc.isUniversal || false}
+                                                onCheckedChange={(c) => {
+                                                    const updated = [...botConfig.customCommands];
+                                                    updated[idx] = { ...updated[idx], isUniversal: c };
+                                                    setBotConfig(prev => ({ ...prev, customCommands: updated }));
+                                                }} />
+                                        </div>
+
                                         {/* Sub-Commands (recursive) */}
                                         {!cc.isLiveChat && (cc.subCommands || []).length > 0 && renderSubCommands([idx], cc.subCommands || [], 1)}
                                         {!cc.isLiveChat && (cc.subCommands || []).length === 0 && (
@@ -993,7 +1026,7 @@ export default function BotSettingsPage() {
                                 className="w-full border-dashed"
                                 onClick={() => setBotConfig(prev => ({
                                     ...prev,
-                                    customCommands: [...prev.customCommands, { command: '', response: '', description: '', isLiveChat: false, subCommands: [] }]
+                                    customCommands: [...prev.customCommands, { command: '', response: '', description: '', isLiveChat: false, isUniversal: false, subCommands: [] }]
                                 }))}
                             >
                                 <Plus className="h-4 w-4 mr-2" />
@@ -1018,9 +1051,49 @@ export default function BotSettingsPage() {
 
                             {botConfig.customCommands.length > 0 && (
                                 <p className="text-xs text-muted-foreground border-l-2 border-emerald-500/50 pl-3 py-1 bg-emerald-500/5 rounded">
-                                    ℹ️ Built-in commands (ping, sticker, etc.) always take priority. After {botConfig.prefix}menu, users can reply with just the command name (no prefix needed).
+                                    ℹ️ Built-in commands always take priority.{botConfig.prefix === "" ? " After menu, users can reply with just the command name." : ""}
                                 </p>
                             )}
+
+                            {/* Universal Navigation Commands */}
+                            <div className="grid gap-3 border-t border-border/50 pt-4">
+                                <Label className="font-semibold flex items-center gap-1.5">🌐 Universal Navigation Commands</Label>
+                                <p className="text-[10px] text-muted-foreground -mt-2">These commands work globally in any menu context. Actions: <code className="bg-muted px-1 rounded">BACK</code> (up one level), <code className="bg-muted px-1 rounded">MAIN_MENU</code> (root menu), <code className="bg-muted px-1 rounded">END_CHAT</code> (end live chat).</p>
+                                {botConfig.universalCommands.map((uc, uIdx) => (
+                                    <div key={uIdx} className="grid grid-cols-[1fr_1fr_2fr_auto] gap-2 items-start">
+                                        <Input placeholder="command" className="text-xs h-8" value={uc.command}
+                                            onChange={(e) => {
+                                                const cmds = [...botConfig.universalCommands];
+                                                cmds[uIdx] = { ...cmds[uIdx], command: e.target.value.replace(/\s/g, '').toLowerCase() };
+                                                setBotConfig(p => ({ ...p, universalCommands: cmds }));
+                                            }} />
+                                        <select className="h-8 text-xs rounded-md border bg-background px-2" value={uc.action}
+                                            onChange={(e) => {
+                                                const cmds = [...botConfig.universalCommands];
+                                                cmds[uIdx] = { ...cmds[uIdx], action: e.target.value };
+                                                setBotConfig(p => ({ ...p, universalCommands: cmds }));
+                                            }}>
+                                            <option value="BACK">BACK</option>
+                                            <option value="MAIN_MENU">MAIN_MENU</option>
+                                            <option value="END_CHAT">END_CHAT</option>
+                                        </select>
+                                        <Input placeholder="description" className="text-xs h-8" value={uc.description}
+                                            onChange={(e) => {
+                                                const cmds = [...botConfig.universalCommands];
+                                                cmds[uIdx] = { ...cmds[uIdx], description: e.target.value };
+                                                setBotConfig(p => ({ ...p, universalCommands: cmds }));
+                                            }} />
+                                        <button type="button" className="text-muted-foreground hover:text-destructive transition-colors h-8 px-1"
+                                            onClick={() => setBotConfig(p => ({ ...p, universalCommands: p.universalCommands.filter((_, i) => i !== uIdx) }))}>
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <Button type="button" variant="outline" size="sm" className="border-dashed text-xs h-7"
+                                    onClick={() => setBotConfig(p => ({ ...p, universalCommands: [...p.universalCommands, { command: '', action: 'BACK', description: '' }] }))}>
+                                    <Plus className="h-3 w-3 mr-1" /> Add Universal Command
+                                </Button>
+                            </div>
 
                             <div className="pt-2">
                                 <Button className="w-full sm:w-auto" onClick={handleSaveBot} disabled={botLoading || !sessionId}>

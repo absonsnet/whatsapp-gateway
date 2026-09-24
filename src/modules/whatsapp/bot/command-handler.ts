@@ -241,18 +241,22 @@ export async function handleBotCommand(
     // Only allow bare replies when prefix is empty — if prefix is set, user must always use it
     if (!isPrefixed && prefix === "" && (chatState?.state === "menu" || chatState?.state === "submenu")) {
         const customCommands = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
+        const universalCmds = Array.isArray((config as any).universalCommands) ? (config as any).universalCommands : [
+            { command: "0", action: "MAIN_MENU" },
+            { command: "back", action: "BACK" },
+        ];
         const trimmed = text.trim().toLowerCase();
         const currentPath = chatState.menuPath || [];
 
-        // "back" → go up one level; "0" → return to main menu
-        if (chatState.state === "submenu" && (trimmed === "back" || trimmed === "0")) {
-            if (trimmed === "0" || currentPath.length <= 1) {
-                // Go to main menu
+        // Check universal commands first (BACK, MAIN_MENU, END_CHAT)
+        const uniMatch = universalCmds.find((uc: any) => uc.command && uc.command.toLowerCase() === trimmed);
+        if (uniMatch) {
+            const action = (uniMatch.action || "").toUpperCase();
+            if (action === "MAIN_MENU" || (action === "BACK" && currentPath.length <= 1)) {
                 setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
                 text = `${prefix}menu`;
                 // Fall through to prefixed handling below
-            } else {
-                // Go up one level — re-send parent menu
+            } else if (action === "BACK" && currentPath.length > 1) {
                 const parentPath = currentPath.slice(0, -1);
                 const parentCommands = resolveCommandsAtPath(customCommands, parentPath.slice(0, -1));
                 const parentCmd = parentCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === parentPath[parentPath.length - 1]);
@@ -262,7 +266,12 @@ export async function handleBotCommand(
                     if (replyText) await sock.sendMessage(remoteJid, { text: replyText }, { quoted: msg });
                 }
                 return;
+            } else if (action === "END_CHAT") {
+                clearChatState(chatKey);
+                await sock.sendMessage(remoteJid, { text: "✅ Live chat ended. Bot is active again." }, { quoted: msg });
+                return;
             }
+            // For MAIN_MENU, fall through
         } else {
             // Resolve commands at current nesting level
             const currentLevelCmds = chatState.state === "submenu" && currentPath.length > 0
@@ -270,7 +279,12 @@ export async function handleBotCommand(
                 : customCommands;
             let matched = currentLevelCmds.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed);
 
-            // Fallback to top-level if no match at current level
+            // Fallback: check isUniversal commands (work at any level)
+            if (!matched) {
+                matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed && cc.isUniversal);
+            }
+
+            // Fallback: check top-level commands
             if (!matched && chatState.state === "submenu") {
                 matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed);
             }
@@ -280,13 +294,11 @@ export async function handleBotCommand(
                     const timeout = (config as any).liveChatTimeout || 30;
                     setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
                 } else if (Array.isArray(matched.subCommands) && matched.subCommands.length > 0) {
-                    // Go deeper — append to path
                     const newPath = chatState.state === "submenu"
                         ? [...currentPath, matched.command.toLowerCase()]
                         : [matched.command.toLowerCase()];
                     setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, newPath);
                 } else {
-                    // Regular response → stay at current level
                     setChatState(chatKey, chatState.state, Date.now() + 30 * 60_000, currentPath.length > 0 ? currentPath : undefined);
                 }
                 const replyText = Array.isArray(matched.subCommands) && matched.subCommands.length > 0
