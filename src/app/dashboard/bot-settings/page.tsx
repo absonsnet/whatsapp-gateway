@@ -276,7 +276,8 @@ export default function BotSettingsPage() {
             if (uniNames.includes(name.toLowerCase())) warnings.push(`"${name}" conflicts with universal command`);
         }
         if (warnings.length > 0) {
-            toast.warning(`Command conflicts: ${warnings.join(", ")}`);
+            toast.error(`Cannot save — command conflicts found:\n${warnings.join("\n")}`);
+            return;
         }
 
         setBotLoading(true);
@@ -1006,13 +1007,14 @@ export default function BotSettingsPage() {
                                                 }} />
                                         </div>
 
-                                        {/* Sub-Commands (recursive) */}
-                                        {!cc.isLiveChat && (cc.subCommands || []).length > 0 && renderSubCommands([idx], cc.subCommands || [], 1)}
-                                        {!cc.isLiveChat && (cc.subCommands || []).length === 0 && (
-                                            <Button type="button" variant="outline" size="sm" className="border-dashed text-xs h-7"
-                                                onClick={() => addSubCommandAtPath([idx])}>
-                                                <Plus className="h-3 w-3 mr-1" /> Add Sub-Commands
-                                            </Button>
+                                        {!cc.isLiveChat && (
+                                            <>
+                                                {(cc.subCommands || []).length > 0 && renderSubCommands([idx], cc.subCommands || [], 1)}
+                                                <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-xs h-7"
+                                                    onClick={() => addSubCommandAtPath([idx])}>
+                                                    <Plus className="h-3 w-3 mr-1" /> {(cc.subCommands || []).length > 0 ? 'Add Another Sub-Command' : 'Add Sub-Commands (Nested Menu)'}
+                                                </Button>
+                                            </>
                                         )}
 
                                         <p className="text-[10px] text-muted-foreground">Users can type <strong>{botConfig.prefix}{cc.command || '...'}</strong> or reply <strong>{cc.command || '...'}</strong> after viewing the menu.</p>
@@ -1064,7 +1066,7 @@ export default function BotSettingsPage() {
                                         <Input placeholder="command" className="text-xs h-8" value={uc.command}
                                             onChange={(e) => {
                                                 const cmds = [...botConfig.universalCommands];
-                                                cmds[uIdx] = { ...cmds[uIdx], command: e.target.value.replace(/\s/g, '').toLowerCase() };
+                                                cmds[uIdx] = { ...cmds[uIdx], command: e.target.value.replace(/\s/g, '') };
                                                 setBotConfig(p => ({ ...p, universalCommands: cmds }));
                                             }} />
                                         <select className="h-8 text-xs rounded-md border bg-background px-2" value={uc.action}
