@@ -34,6 +34,32 @@ const DEFAULT_CONFIG = {
     removeBgApiKey: null as string | null
 };
 
+/** Build response text with sub-menu items appended */
+function buildResponseWithSubMenu(response: string, subCommands: any[], prefix: string): string {
+    let text = response || "";
+    if (Array.isArray(subCommands) && subCommands.length > 0) {
+        text += `\n\n📋 *Reply with:*\n`;
+        for (const sc of subCommands) {
+            if (sc.command) {
+                text += `• *${prefix ? prefix : ""}${sc.command}*${sc.description ? ` — ${sc.description}` : ""}\n`;
+            }
+        }
+        text += `\n_Type *0* or *back* to go back_`;
+    }
+    return text;
+}
+
+/** Walk the menuPath to find the subCommands array at the current nesting level */
+function resolveCommandsAtPath(customCommands: any[], menuPath: string[]): any[] {
+    let commands = customCommands;
+    for (const segment of menuPath) {
+        const parent = commands.find((cc: any) => cc.command && cc.command.toLowerCase() === segment);
+        if (!parent || !Array.isArray(parent.subCommands)) return [];
+        commands = parent.subCommands;
+    }
+    return commands;
+}
+
 export function setSessionStartTime(sessionId: string) {
     if (!startTimes.has(sessionId)) {
         startTimes.set(sessionId, Date.now());
@@ -212,30 +238,40 @@ export async function handleBotCommand(
     if (chatState?.state === "livechat" && !isPrefixed) return;
 
     // Handle bare menu/submenu replies (no prefix, context-aware)
-    if (!isPrefixed && (chatState?.state === "menu" || chatState?.state === "submenu")) {
+    // Only allow bare replies when prefix is empty — if prefix is set, user must always use it
+    if (!isPrefixed && prefix === "" && (chatState?.state === "menu" || chatState?.state === "submenu")) {
         const customCommands = Array.isArray((config as any).customCommands) ? (config as any).customCommands : [];
         const trimmed = text.trim().toLowerCase();
+        const currentPath = chatState.menuPath || [];
 
-        // "back" or "0" → return to main menu
+        // "back" → go up one level; "0" → return to main menu
         if (chatState.state === "submenu" && (trimmed === "back" || trimmed === "0")) {
-            setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
-            // Re-send main menu
-            const helpCmd = "menu";
-            // Trigger the menu command by setting text and falling through
-            text = `${prefix}${helpCmd}`;
-            // Don't return — let it fall through to prefixed handling below
-        } else {
-            let matched: any = null;
-
-            if (chatState.state === "submenu" && chatState.parentCommand) {
-                // In submenu → check parent command's subCommands first
-                const parent = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === chatState.parentCommand);
-                const subs = Array.isArray(parent?.subCommands) ? parent.subCommands : [];
-                matched = subs.find((sc: any) => sc.command && sc.command.toLowerCase() === trimmed);
+            if (trimmed === "0" || currentPath.length <= 1) {
+                // Go to main menu
+                setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
+                text = `${prefix}menu`;
+                // Fall through to prefixed handling below
+            } else {
+                // Go up one level — re-send parent menu
+                const parentPath = currentPath.slice(0, -1);
+                const parentCommands = resolveCommandsAtPath(customCommands, parentPath.slice(0, -1));
+                const parentCmd = parentCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === parentPath[parentPath.length - 1]);
+                setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, parentPath);
+                if (parentCmd) {
+                    const replyText = buildResponseWithSubMenu(parentCmd.response, parentCmd.subCommands || [], prefix);
+                    if (replyText) await sock.sendMessage(remoteJid, { text: replyText }, { quoted: msg });
+                }
+                return;
             }
+        } else {
+            // Resolve commands at current nesting level
+            const currentLevelCmds = chatState.state === "submenu" && currentPath.length > 0
+                ? resolveCommandsAtPath(customCommands, currentPath)
+                : customCommands;
+            let matched = currentLevelCmds.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed);
 
-            // If no submenu match, check top-level commands
-            if (!matched) {
+            // Fallback to top-level if no match at current level
+            if (!matched && chatState.state === "submenu") {
                 matched = customCommands.find((cc: any) => cc.command && cc.command.toLowerCase() === trimmed);
             }
 
@@ -244,14 +280,20 @@ export async function handleBotCommand(
                     const timeout = (config as any).liveChatTimeout || 30;
                     setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
                 } else if (Array.isArray(matched.subCommands) && matched.subCommands.length > 0) {
-                    // Command has sub-commands → enter submenu state
-                    setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, matched.command.toLowerCase());
+                    // Go deeper — append to path
+                    const newPath = chatState.state === "submenu"
+                        ? [...currentPath, matched.command.toLowerCase()]
+                        : [matched.command.toLowerCase()];
+                    setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, newPath);
                 } else {
-                    // Regular response → stay in menu state
-                    setChatState(chatKey, "menu", Date.now() + 30 * 60_000);
+                    // Regular response → stay at current level
+                    setChatState(chatKey, chatState.state, Date.now() + 30 * 60_000, currentPath.length > 0 ? currentPath : undefined);
                 }
-                if (matched.response) {
-                    await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+                const replyText = Array.isArray(matched.subCommands) && matched.subCommands.length > 0
+                    ? buildResponseWithSubMenu(matched.response, matched.subCommands, prefix)
+                    : matched.response;
+                if (replyText) {
+                    await sock.sendMessage(remoteJid, { text: replyText }, { quoted: msg });
                 }
             }
             return;
@@ -695,10 +737,13 @@ export async function handleBotCommand(
                         const timeout = (config as any).liveChatTimeout || 30;
                         setChatState(chatKey, "livechat", Date.now() + timeout * 60_000);
                     } else if (Array.isArray(matched.subCommands) && matched.subCommands.length > 0) {
-                        setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, matched.command.toLowerCase());
+                        setChatState(chatKey, "submenu", Date.now() + 30 * 60_000, [matched.command.toLowerCase()]);
                     }
-                    if (matched.response) {
-                        await sock.sendMessage(remoteJid, { text: matched.response }, { quoted: msg });
+                    const replyText = Array.isArray(matched.subCommands) && matched.subCommands.length > 0
+                        ? buildResponseWithSubMenu(matched.response, matched.subCommands, prefix)
+                        : matched.response;
+                    if (replyText) {
+                        await sock.sendMessage(remoteJid, { text: replyText }, { quoted: msg });
                     }
                 }
                 break;

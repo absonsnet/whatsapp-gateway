@@ -10,7 +10,7 @@ export type ChatStateType = "menu" | "livechat" | "submenu";
 
 interface ChatState {
     state: ChatStateType;
-    parentCommand?: string; // tracks which command's sub-menu we're in
+    menuPath?: string[]; // tracks nesting depth, e.g. ["1", "2"] = inside cmd 1 → sub-cmd 2
     expiresAt: number;
 }
 
@@ -29,8 +29,8 @@ export function makeChatKey(sessionId: string, remoteJid: string): string {
     return `${sessionId}:${remoteJid}`;
 }
 
-export function setChatState(key: string, state: ChatStateType, expiresAt: number, parentCommand?: string): void {
-    states.set(key, { state, expiresAt, parentCommand });
+export function setChatState(key: string, state: ChatStateType, expiresAt: number, menuPath?: string[]): void {
+    states.set(key, { state, expiresAt, menuPath });
 }
 
 export function getChatState(key: string): ChatState | null {

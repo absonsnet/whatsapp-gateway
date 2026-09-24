@@ -3,6 +3,7 @@ import type { WASocket } from "@whiskeysockets/baileys";
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
 import { logger } from "@/lib/logger";
 import { userPlanAllows } from "@/lib/plans-store";
+import { makeChatKey, getChatState } from "../bot/chat-state";
 
 // Helper for permission check (Deduplicate from command-handler if possible, but keep simple here)
 function canAutoReply(config: any, fromMe: boolean, senderJid: string): boolean {
@@ -104,6 +105,10 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
             }
 
             if (!remoteJid || !senderJid) continue;
+
+            // Skip auto-reply if chat is in livechat mode (bot paused)
+            const chatState = getChatState(makeChatKey(sessionId, remoteJid));
+            if (chatState?.state === "livechat") continue;
 
             // Check Permissions
             if (!canAutoReply(config, fromMe, senderJid)) continue;

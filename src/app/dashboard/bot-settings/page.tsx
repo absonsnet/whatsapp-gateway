@@ -20,6 +20,14 @@ import { RefreshCw, Save, AlertCircle, Bot, X, Plus, ShieldCheck, Zap, UserCheck
 import { toast } from "sonner";
 import { SessionGuard } from "@/components/dashboard/session-guard";
 
+interface CustomCommand {
+    command: string;
+    response: string;
+    description: string;
+    isLiveChat: boolean;
+    subCommands: CustomCommand[];
+}
+
 export default function BotSettingsPage() {
     const { sessionId } = useSessionProvider();
 
@@ -58,7 +66,7 @@ export default function BotSettingsPage() {
         antiLinkGroups: [] as string[],
 
         // Custom Commands
-        customCommands: [] as Array<{ command: string; response: string; description: string; isLiveChat: boolean; subCommands: Array<{ command: string; response: string; description: string; isLiveChat: boolean }> }>,
+        customCommands: [] as CustomCommand[],
         customMenuText: "",
         autoAppendCommands: true,
         liveChatTimeout: 30,
@@ -66,6 +74,85 @@ export default function BotSettingsPage() {
     const [botLoading, setBotLoading] = useState(false);
 
     const [newJid, setNewJid] = useState("");
+
+    /** Deep-update a subCommand at a given path (array of indices). */
+    const updateCommandAtPath = (path: number[], field: string, value: any) => {
+        setBotConfig(prev => {
+            const cmds = JSON.parse(JSON.stringify(prev.customCommands)) as CustomCommand[];
+            let target: CustomCommand[] = cmds;
+            for (let i = 0; i < path.length - 1; i++) {
+                target = target[path[i]].subCommands || [];
+            }
+            (target[path[path.length - 1]] as any)[field] = value;
+            return { ...prev, customCommands: cmds };
+        });
+    };
+
+    const addSubCommandAtPath = (path: number[]) => {
+        setBotConfig(prev => {
+            const cmds = JSON.parse(JSON.stringify(prev.customCommands)) as CustomCommand[];
+            let target: CustomCommand[] = cmds;
+            for (const i of path) {
+                target = target[i].subCommands = target[i].subCommands || [];
+            }
+            target.push({ command: '', response: '', description: '', isLiveChat: false, subCommands: [] });
+            return { ...prev, customCommands: cmds };
+        });
+    };
+
+    const removeSubCommandAtPath = (path: number[], idx: number) => {
+        setBotConfig(prev => {
+            const cmds = JSON.parse(JSON.stringify(prev.customCommands)) as CustomCommand[];
+            let target: CustomCommand[] = cmds;
+            for (const i of path) {
+                target = target[i].subCommands = target[i].subCommands || [];
+            }
+            target.splice(idx, 1);
+            return { ...prev, customCommands: cmds };
+        });
+    };
+
+    /** Render sub-commands recursively, capped at maxDepth levels */
+    const renderSubCommands = (parentPath: number[], subCommands: CustomCommand[], depth: number = 1, maxDepth: number = 4) => (
+        <details className="border rounded-lg bg-background/50" style={{ marginLeft: `${Math.min(depth * 8, 32)}px` }}>
+            <summary className="p-2.5 cursor-pointer select-none text-xs font-medium hover:bg-muted/30 rounded-lg transition-colors flex items-center justify-between">
+                <span>Sub-Commands ({subCommands.length})</span>
+                <span className="text-[10px] text-muted-foreground">Level {depth}</span>
+            </summary>
+            <div className="p-3 space-y-2 border-t">
+                {subCommands.map((sc, sIdx) => (
+                    <div key={sIdx} className="space-y-1">
+                        <div className="grid grid-cols-[1fr_1fr_2fr_auto] gap-2 items-start">
+                            <Input placeholder="cmd" className="text-xs h-8" value={sc.command}
+                                onChange={(e) => updateCommandAtPath([...parentPath, sIdx], 'command', e.target.value.replace(/\s/g, '').toLowerCase())} />
+                            <Input placeholder="description" className="text-xs h-8" value={sc.description}
+                                onChange={(e) => updateCommandAtPath([...parentPath, sIdx], 'description', e.target.value)} />
+                            <Input placeholder="response text" className="text-xs h-8" value={sc.response}
+                                onChange={(e) => updateCommandAtPath([...parentPath, sIdx], 'response', e.target.value)} />
+                            <button type="button" className="text-muted-foreground hover:text-destructive transition-colors h-8 px-1"
+                                onClick={() => removeSubCommandAtPath(parentPath, sIdx)}>
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                        {/* Recursive sub-commands */}
+                        {depth < maxDepth && (sc.subCommands || []).length > 0 && renderSubCommands([...parentPath, sIdx], sc.subCommands || [], depth + 1, maxDepth)}
+                        {depth < maxDepth && (sc.subCommands || []).length === 0 && (
+                            <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground ml-2"
+                                onClick={() => addSubCommandAtPath([...parentPath, sIdx])}>
+                                + Add nested sub-commands
+                            </button>
+                        )}
+                    </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-xs h-7"
+                    onClick={() => addSubCommandAtPath(parentPath)}>
+                    <Plus className="h-3 w-3 mr-1" /> Add Sub-Command
+                </Button>
+                <p className="text-[10px] text-muted-foreground">Type <strong>back</strong> to go up one level, <strong>0</strong> to return to main menu.</p>
+            </div>
+        </details>
+    );
+
 
     const [privacyConfig, setPrivacyConfig] = useState({
         ghostMode: false,
@@ -141,8 +228,37 @@ export default function BotSettingsPage() {
             .catch(() => { });
     }, [sessionId]);
 
+    const BUILTIN_COMMANDS = ["ping", "sticker", "s", "menu", "help", "id", "uptime", "tagall", "everyone", "hidetag", "kick", "add", "promote", "demote", "open", "close", "mute", "unmute", "endchat"];
+
+    /** Collect all command names recursively from custom commands */
+    const collectCommandNames = (cmds: CustomCommand[], prefix: string = ""): string[] => {
+        const names: string[] = [];
+        for (const c of cmds) {
+            if (c.command) names.push(prefix ? `${prefix} → ${c.command}` : c.command);
+            if (c.subCommands?.length) names.push(...collectCommandNames(c.subCommands, c.command));
+        }
+        return names;
+    };
+
     const handleSaveBot = async () => {
         if (!sessionId) return;
+
+        // Conflict detection (warn only, don't block)
+        const warnings: string[] = [];
+        const allNames = collectCommandNames(botConfig.customCommands);
+        const seen = new Map<string, number>();
+        for (const name of allNames) {
+            const key = name.includes(" → ") ? name.split(" → ").pop()! : name;
+            seen.set(key, (seen.get(key) || 0) + 1);
+        }
+        for (const [name, count] of seen) {
+            if (count > 1) warnings.push(`"${name}" appears ${count} times`);
+            if (BUILTIN_COMMANDS.includes(name.toLowerCase())) warnings.push(`"${name}" conflicts with built-in command`);
+        }
+        if (warnings.length > 0) {
+            toast.warning(`Command conflicts: ${warnings.join(", ")}`);
+        }
+
         setBotLoading(true);
         try {
             const res = await fetch(`/api/sessions/${sessionId}/bot-config`, {
@@ -857,73 +973,13 @@ export default function BotSettingsPage() {
                                                 }} />
                                         </div>
 
-                                        {/* Sub-Commands */}
-                                        {!cc.isLiveChat && (
-                                            <details className="border rounded-lg bg-background/50">
-                                                <summary className="p-2.5 cursor-pointer select-none text-xs font-medium hover:bg-muted/30 rounded-lg transition-colors flex items-center justify-between">
-                                                    <span>Sub-Commands ({(cc.subCommands || []).length})</span>
-                                                    <span className="text-[10px] text-muted-foreground">Nested menu — shown after user picks this command</span>
-                                                </summary>
-                                                <div className="p-3 space-y-2 border-t">
-                                                    {(cc.subCommands || []).map((sc, sIdx) => (
-                                                        <div key={sIdx} className="grid grid-cols-[1fr_1fr_2fr_auto] gap-2 items-start">
-                                                            <Input
-                                                                placeholder="cmd"
-                                                                className="text-xs h-8"
-                                                                value={sc.command}
-                                                                onChange={(e) => {
-                                                                    const cmds = [...botConfig.customCommands];
-                                                                    const subs = [...(cmds[idx].subCommands || [])];
-                                                                    subs[sIdx] = { ...subs[sIdx], command: e.target.value.replace(/\s/g, '').toLowerCase() };
-                                                                    cmds[idx] = { ...cmds[idx], subCommands: subs };
-                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
-                                                                }}
-                                                            />
-                                                            <Input
-                                                                placeholder="description"
-                                                                className="text-xs h-8"
-                                                                value={sc.description}
-                                                                onChange={(e) => {
-                                                                    const cmds = [...botConfig.customCommands];
-                                                                    const subs = [...(cmds[idx].subCommands || [])];
-                                                                    subs[sIdx] = { ...subs[sIdx], description: e.target.value };
-                                                                    cmds[idx] = { ...cmds[idx], subCommands: subs };
-                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
-                                                                }}
-                                                            />
-                                                            <Input
-                                                                placeholder="response text"
-                                                                className="text-xs h-8"
-                                                                value={sc.response}
-                                                                onChange={(e) => {
-                                                                    const cmds = [...botConfig.customCommands];
-                                                                    const subs = [...(cmds[idx].subCommands || [])];
-                                                                    subs[sIdx] = { ...subs[sIdx], response: e.target.value };
-                                                                    cmds[idx] = { ...cmds[idx], subCommands: subs };
-                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
-                                                                }}
-                                                            />
-                                                            <button type="button" className="text-muted-foreground hover:text-destructive transition-colors h-8 px-1"
-                                                                onClick={() => {
-                                                                    const cmds = [...botConfig.customCommands];
-                                                                    cmds[idx] = { ...cmds[idx], subCommands: (cmds[idx].subCommands || []).filter((_, i) => i !== sIdx) };
-                                                                    setBotConfig(p => ({ ...p, customCommands: cmds }));
-                                                                }}>
-                                                                <X className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                    <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-xs h-7"
-                                                        onClick={() => {
-                                                            const cmds = [...botConfig.customCommands];
-                                                            cmds[idx] = { ...cmds[idx], subCommands: [...(cmds[idx].subCommands || []), { command: '', response: '', description: '', isLiveChat: false }] };
-                                                            setBotConfig(p => ({ ...p, customCommands: cmds }));
-                                                        }}>
-                                                        <Plus className="h-3 w-3 mr-1" /> Add Sub-Command
-                                                    </Button>
-                                                    <p className="text-[10px] text-muted-foreground">When user picks <strong>{botConfig.prefix}{cc.command || '...'}</strong>, your response above is sent. Then they can reply with a sub-command. Type <strong>0</strong> or <strong>back</strong> to return to main menu.</p>
-                                                </div>
-                                            </details>
+                                        {/* Sub-Commands (recursive) */}
+                                        {!cc.isLiveChat && (cc.subCommands || []).length > 0 && renderSubCommands([idx], cc.subCommands || [], 1)}
+                                        {!cc.isLiveChat && (cc.subCommands || []).length === 0 && (
+                                            <Button type="button" variant="outline" size="sm" className="border-dashed text-xs h-7"
+                                                onClick={() => addSubCommandAtPath([idx])}>
+                                                <Plus className="h-3 w-3 mr-1" /> Add Sub-Commands
+                                            </Button>
                                         )}
 
                                         <p className="text-[10px] text-muted-foreground">Users can type <strong>{botConfig.prefix}{cc.command || '...'}</strong> or reply <strong>{cc.command || '...'}</strong> after viewing the menu.</p>
