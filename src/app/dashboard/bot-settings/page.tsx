@@ -124,7 +124,7 @@ export default function BotSettingsPage() {
     };
 
     /** Render sub-commands recursively, capped at maxDepth levels */
-    const renderSubCommands = (parentPath: number[], subCommands: CustomCommand[], depth: number = 1, maxDepth: number = 4) => (
+    const renderSubCommands = (parentPath: number[], subCommands: CustomCommand[], depth: number = 1, maxDepth: number = 6) => (
         <details className="border rounded-lg bg-background/50" style={{ marginLeft: `${Math.min(depth * 8, 32)}px` }}>
             <summary className="p-2.5 cursor-pointer select-none text-xs font-medium hover:bg-muted/30 rounded-lg transition-colors flex items-center justify-between">
                 <span>Sub-Commands ({subCommands.length})</span>
@@ -146,12 +146,14 @@ export default function BotSettingsPage() {
                             </button>
                         </div>
                         {/* Recursive sub-commands */}
-                        {depth < maxDepth && (sc.subCommands || []).length > 0 && renderSubCommands([...parentPath, sIdx], sc.subCommands || [], depth + 1, maxDepth)}
-                        {depth < maxDepth && (sc.subCommands || []).length === 0 && (
-                            <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground ml-2"
-                                onClick={() => addSubCommandAtPath([...parentPath, sIdx])}>
-                                + Add nested sub-commands
-                            </button>
+                        {depth < maxDepth && (
+                            <>
+                                {(sc.subCommands || []).length > 0 && renderSubCommands([...parentPath, sIdx], sc.subCommands || [], depth + 1, maxDepth)}
+                                <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-[10px] h-6"
+                                    onClick={() => addSubCommandAtPath([...parentPath, sIdx])}>
+                                    <Plus className="h-3 w-3 mr-1" /> {(sc.subCommands || []).length > 0 ? 'Add Another Sub-Command' : 'Add Sub-Commands (Nested Menu)'}
+                                </Button>
+                            </>
                         )}
                     </div>
                 ))}
