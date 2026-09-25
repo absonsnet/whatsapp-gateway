@@ -150,6 +150,7 @@ export default function BotSettingsPage() {
                             <>
                                 {(sc.subCommands || []).length > 0 && renderSubCommands([...parentPath, sIdx], sc.subCommands || [], depth + 1, maxDepth)}
                                 <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-[10px] h-6"
+                                    disabled={!sc.command.trim()}
                                     onClick={() => addSubCommandAtPath([...parentPath, sIdx])}>
                                     <Plus className="h-3 w-3 mr-1" /> {(sc.subCommands || []).length > 0 ? 'Add Another Sub-Command' : 'Add Sub-Commands (Nested Menu)'}
                                 </Button>
@@ -1013,6 +1014,7 @@ export default function BotSettingsPage() {
                                             <>
                                                 {(cc.subCommands || []).length > 0 && renderSubCommands([idx], cc.subCommands || [], 1)}
                                                 <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-xs h-7"
+                                                    disabled={!cc.command.trim()}
                                                     onClick={() => addSubCommandAtPath([idx])}>
                                                     <Plus className="h-3 w-3 mr-1" /> {(cc.subCommands || []).length > 0 ? 'Add Another Sub-Command' : 'Add Sub-Commands (Nested Menu)'}
                                                 </Button>
